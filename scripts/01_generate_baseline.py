@@ -29,7 +29,8 @@ def run_baseline():
     correct_count = 0
 
     # 'a' mode so a partial run can be resumed without losing earlier lines.
-    # If you're starting fresh, delete/rename any existing stage1_baseline.jsonl first.
+
+    
     with open(OUTPUT_PATH, "a") as out_file:
         for i, problem in enumerate(problems, 1):
             question = problem["question"]
@@ -40,6 +41,7 @@ def run_baseline():
             try:
                 raw_response = get_model_response(question)
             except Exception as e:
+                
                 # Log the failure as its own record instead of silently skipping it,
                 # so a rate-limit or API hiccup is visible in the data, not just the terminal.
                 print(f"API ERROR: {e}")
