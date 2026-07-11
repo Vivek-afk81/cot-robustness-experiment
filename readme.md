@@ -111,13 +111,10 @@ finding:found parser bug: model occasionally used (N). step numbering instead of
 
 Finding: Although the evaluation set was stratified by reference solution length (25 problems per bucket), the model generated substantially longer reasoning chains, with mean parsed lengths of 4.48, 4.72, 5.12, and 6.92 steps for the 2-, 3-, 4-, and 5+-step buckets respectively.
 
-**Known limitation, stated explicitly rather than engineered around:** for exactly-3-step
-chains, the Partial-permutation condition (first/last fixed, middle shuffled) is
-mathematically identical to Baseline, since there is no middle step to shuffle. This is
-accounted for in analysis, not treated as a data error.
+known limitation : Partial-permutation degeneracy is not limited to exactly-3-step chains. A 4-step chain's middle sub-list has only 2 elements, and the only non-identity permutation of 2 elements is equivalent to reversing them — so Partial collapses into either Baseline or a middle-reversal for 4-step chains too, not just 3-step ones. Confirmed empirically: 38/89 eligible problems (all 3-step and 4-step chains) are flagged degenerate for Partial. Partial is only meaningfully distinct from Baseline/Reversed for chains with ≥5 steps (51/89 problems). Stage 4 analysis will report Partial accuracy separately for degenerate vs. non-degenerate chains rather than blending them into one aggregate, to avoid biasing the reported Partial-vs-Baseline gap toward looking artificially small.
 
-### [Date] — Stage 2 permutation engine
-*(next entry — fill in once `02_permute_conditions.py` is written and run)*
+### [11-07-2026] — Stage 2 permutation engine
+
 
 ---
 

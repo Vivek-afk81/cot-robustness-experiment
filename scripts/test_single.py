@@ -6,6 +6,7 @@ import json
 from collections import defaultdict
 from collections import Counter
 
+
 def get_records_by_step_count(min_steps=3, path="data/day27_gsm8k_subset.json"):
     with open(path, "r") as f:
         records = json.load(f)
@@ -45,7 +46,7 @@ def count_records(path="data/stage1_baseline_reparsed.jsonl"):
 
 
 
-def get_incorrect_records(path="data/stage1_baseline.jsonl"):
+def get_incorrect_records(path="data/stage1_baseline_buggy.jsonl"):
     incorrect = []
 
     with open(path) as f:
@@ -139,10 +140,44 @@ for bucket in ["2-step", "3-step", "4-step", "5+-step"]:
 
 
 
+# with open("data/stage1_baseline_reparsed.jsonl") as f:
+#     for line in f:
+#         r = json.loads(line)
+#         n_steps = len(r["parsed_steps"]) if r["parsed_steps"] else 0
+#         resp_len = len(r["raw_response"]) if r["raw_response"] else 0
+#         if n_steps <= 2 and resp_len > 800:  # long response, suspiciously few parsed steps
+#             print(r["problem_id"], n_steps, resp_len)
+
+#actual step-count breakdown for just the 89 eligible problems and see if it lines up:
+
+
 with open("data/stage1_baseline_reparsed.jsonl") as f:
+    counts = Counter()
     for line in f:
         r = json.loads(line)
-        n_steps = len(r["parsed_steps"]) if r["parsed_steps"] else 0
-        resp_len = len(r["raw_response"]) if r["raw_response"] else 0
-        if n_steps <= 2 and resp_len > 800:  # long response, suspiciously few parsed steps
-            print(r["problem_id"], n_steps, resp_len)
+        n = len(r["parsed_steps"]) if r["parsed_steps"] else 0
+        if r["correct"] and n >= 3:
+            counts[n] += 1
+
+# print(dict(sorted(counts.items())))
+# print("3-step + 4-step count:", counts[3] + counts[4])
+
+
+"""split the Partial number — because it's mixing two very different populations, and doing that first will change we read everything else."""
+
+correct_by_group = defaultdict(int)
+total_by_group = defaultdict(int)
+
+with open("results/stage2_results.jsonl") as f:
+    for line in f:
+        r = json.loads(line)
+        if r["condition"] != "partial":
+            continue
+        key = "degenerate" if r["degenerate"] else "non-degenerate"
+        total_by_group[key] += 1
+        if r["correct"]:
+            correct_by_group[key] += 1
+
+for key in total_by_group:
+    c, t = correct_by_group[key], total_by_group[key]
+    print(f"partial ({key}): {c}/{t} ({c/t:.2%})")
