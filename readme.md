@@ -106,6 +106,11 @@ Decision: minimum 3 steps required for a problem to enter Stage 2. Checked actua
 on the correct subset: `{'step3plus': 98, 'correct_and_3plus': 88}` — only 2 problems
 lost by this cutoff, negligible impact on bucket representation.
 
+finding:found parser bug: model occasionally used (N). step numbering instead of N., causing one record to silently parse to zero steps despite a correct final answer. Fixed regex to accept both formats. Re-parsed into stage1_baseline_reparsed.jsonl. step3plus 98→99, correct_and_3plus 88→89.
+
+
+Finding: Although the evaluation set was stratified by reference solution length (25 problems per bucket), the model generated substantially longer reasoning chains, with mean parsed lengths of 4.48, 4.72, 5.12, and 6.92 steps for the 2-, 3-, 4-, and 5+-step buckets respectively.
+
 **Known limitation, stated explicitly rather than engineered around:** for exactly-3-step
 chains, the Partial-permutation condition (first/last fixed, middle shuffled) is
 mathematically identical to Baseline, since there is no middle step to shuffle. This is

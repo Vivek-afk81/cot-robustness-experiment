@@ -32,7 +32,7 @@ def parse_response(raw_text):
 
     for line in lines:
         answer_match = re.search(r"final answer:?\s*\$?(-?[\d,]+\.?\d*)", line, re.IGNORECASE)
-        step_match = re.match(r"^\d+\.\s*(.+)", line)
+        step_match = re.match(r"^\(?(\d+)\)?\.\s*(.+)", line)
 
         if answer_match:
             final_answer = answer_match.group(1).replace(",", "")
