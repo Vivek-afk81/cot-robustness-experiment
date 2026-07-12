@@ -1,10 +1,11 @@
 """
 script to check how many questions are correct and have step_count >=3 out of all 100
 """
-
+import re
 import json
 from collections import defaultdict
 from collections import Counter
+
 
 
 def get_records_by_step_count(min_steps=3, path="data/day27_gsm8k_subset.json"):
@@ -184,13 +185,13 @@ for key in total_by_group:
 
 """three records show parsed=None — problems 13, 28, and 67. A None means the parser found no "Final answer: X" line at all, not that it found a wrong number. """
 
-with open("results/stage2_baseline_control.jsonl") as f:
-    for line in f:
-        r = json.loads(line)
-        if r["problem_id"]== 67 and r["parsed_answer"] is None:
-            print("PROBLEM", r["problem_id"])
-            print(r["raw_response"])
-            # print("---")
+# with open("results/stage2_baseline_control.jsonl") as f:
+#     for line in f:
+#         r = json.loads(line)
+#         if r["problem_id"]== 67 and r["parsed_answer"] is None:
+#             print("PROBLEM", r["problem_id"])
+#             print(r["raw_response"])
+#             # print("---")
 
 
 """script to get the real flip-rate, per condition, which is more informative than any of the aggregate deltas """
@@ -227,13 +228,100 @@ def load_by_problem(path, condition_filter=None):
 
 """check problem 67's actual question/steps"""
 
-with open("data/stage1_baseline_reparsed.jsonl") as f:
+# with open("data/stage1_baseline_reparsed.jsonl") as f:
+#     for line in f:
+#         r = json.loads(line)
+#         if r["problem_id"] == 67:
+#             print("QUESTION:", r["question"])
+#             print("GROUND TRUTH:", r["ground_truth"])
+#             print("\nORIGINAL STAGE 1 STEPS (in order):")
+#             for i, step in enumerate(r["parsed_steps"], 1):
+#                 print(f"  {i}. {step}")
+#             break
+
+"""problem 67 stage 1 original response"""
+# with open("data/stage1_baseline_reparsed.jsonl") as f:
+#     for line in f:
+#         r = json.loads(line)
+#         if r["problem_id"] == 67:
+#             print("CORRECT:", r["correct"])
+#             print("PARSED ANSWER:", r["parsed_answer"])
+#             print("\nRAW RESPONSE:\n", r["raw_response"])
+#             break
+
+"""scan all 89 eligible records for this same "steps are just bare digits" pattern:"""
+
+# suspicious = []
+# with open("data/stage1_baseline_reparsed.jsonl") as f:
+#     for line in f:
+#         r = json.loads(line)
+#         n_steps = len(r["parsed_steps"]) if r["parsed_steps"] else 0
+#         if r["correct"] and n_steps >= 3:
+#             # flag if any step is suspiciously short (just a bare number)
+#             if any(re.fullmatch(r"\d+\.?", str(s).strip()) for s in r["parsed_steps"]):
+#                 suspicious.append(r["problem_id"])
+
+# print("Problems with bare-digit steps:", suspicious)
+
+# with open("data/stage1_baseline_reparsed.jsonl") as f:
+#     for line in f:
+#         r = json.loads(line)
+#         if r["problem_id"] == 67:
+#             print("parsed_steps (raw repr):", repr(r["parsed_steps"]))
+#             print("raw_response (first 200 chars):", repr(r["raw_response"][:200]))
+#             break
+
+"""finding suspicious records generated from broken parser output"""
+# suspicious = []
+# with open("data/stage1_baseline_reparsed.jsonl") as f:
+#     for line in f:
+#         r = json.loads(line)
+#         n_steps = len(r["parsed_steps"]) if r["parsed_steps"] else 0
+#         if r["correct"] and n_steps >= 3:
+#             if all(re.fullmatch(r"\d+", str(s).strip()) for s in r["parsed_steps"]):
+#                 suspicious.append(r["problem_id"])
+
+# print(f"Fully bare-digit records: {len(suspicious)}")
+# print("IDs:", suspicious)
+
+# mismatches = 0
+# with open("data/stage1_baseline_v2.jsonl") as f:
+#     for line in f:
+#         r = json.loads(line)
+#         if r["_answer_mismatch_flag"] or r["_correct_mismatch_flag"]:
+#             mismatches += 1
+#             print(r["problem_id"], r["_answer_mismatch_flag"], r["_correct_mismatch_flag"])
+
+# print("Total mismatches:", mismatches)
+
+"""recompute eligibility on the corrected file:"""
+
+# eligible_ids = []
+# bucket_counts = Counter()
+
+# with open("data/stage1_baseline_v2.jsonl") as f:
+#     for line in f:
+#         r = json.loads(line)
+#         n_steps = len(r["parsed_steps"]) if r["parsed_steps"] else 0
+#         if r["correct"] and n_steps >= 3:
+#             eligible_ids.append(r["problem_id"])
+#             bucket_counts[r["bucket"]] += 1
+
+# print("New eligible count:", len(eligible_ids))
+# print("Bucket breakdown:", dict(bucket_counts))
+# print("Old eligible count was: 89")
+
+"""Re-run the Partial-degeneracy math on this corrected file,"""
+
+
+
+with open("data/stage1_baseline_v2.jsonl") as f:
+    counts = Counter()
     for line in f:
         r = json.loads(line)
-        if r["problem_id"] == 67:
-            print("QUESTION:", r["question"])
-            print("GROUND TRUTH:", r["ground_truth"])
-            print("\nORIGINAL STAGE 1 STEPS (in order):")
-            for i, step in enumerate(r["parsed_steps"], 1):
-                print(f"  {i}. {step}")
-            break
+        n = len(r["parsed_steps"]) if r["parsed_steps"] else 0
+        if r["correct"] and n >= 3:
+            counts[n] += 1
+
+print(dict(sorted(counts.items())))
+print("3-step + 4-step count (Partial degenerate):", counts[3] + counts[4])

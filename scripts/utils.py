@@ -45,7 +45,7 @@ def parse_response(raw_text):
             # A new numbered step started — save the previous one first
             if current_step is not None:
                 steps.append(current_step)
-            current_step = step_match.group(1)
+            current_step = step_match.group(2)
         else:
             # This line has no number — it's a continuation of the current step
             if current_step is not None:

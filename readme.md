@@ -116,6 +116,9 @@ known limitation : Partial-permutation degeneracy is not limited to exactly-3-st
 ### [11-07-2026] — Stage 2 permutation engine
 
 
+### [12-07-2026]
+
+ Re-run stability check, due to a concern that temp=0.0 does not guarantee identical outputs across separate API calls — re-ran all 4 Stage 2 conditions once more (Trial 2) to check. Core finding held: Reversed < Shuffled < Partial in both trials. Per-problem flip rate (correct↔wrong between trials) scales with order disruption: Baseline-control 2.2%, Partial 5.6%, Shuffled 6.7%, Reversed 13.5% — disrupted order doesn't just lower accuracy, it lowers reproducibility. Reporting Reversed accuracy as a 2-trial average (58.4%), not a single-run point estimate, given its noise level.
 ---
 
 ## Open items / deferred decisions
