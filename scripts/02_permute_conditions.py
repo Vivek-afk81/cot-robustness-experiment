@@ -19,7 +19,7 @@ import json
 from utils import get_reversed, get_shuffled, get_partial
 
 
-INPUT_PATH = "data/stage1_baseline_reparsed.jsonl"
+INPUT_PATH = "data/stage1_baseline_v2.jsonl"
 MIN_STEPS = 3
 
 OUTPUT_PATHS = {

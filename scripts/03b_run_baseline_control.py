@@ -25,9 +25,9 @@ import time
 from utils import get_model_response_stage2, parse_response, normalize_answer
 
 
-INPUT_PATH = "data/stage1_baseline_reparsed.jsonl"
-TRIAL = 2  # bump this each time you re-run — keeps trials distinguishable, never overwrites past runs
-OUTPUT_PATH = f"results/stage2_baseline_control_trial{TRIAL}.jsonl"
+INPUT_PATH = "data/stage1_baseline_v2.jsonl"   #also updated this, same as Step 4
+TRIAL = 1
+OUTPUT_PATH = f"results/stage2_baseline_control_v2_trial{TRIAL}.jsonl"
 MIN_STEPS = 3
 SLEEP_SECONDS = 2.5
 
@@ -115,15 +115,28 @@ def run():
             time.sleep(SLEEP_SECONDS)
 
     accuracy = correct_count / total
+    # Compute Stage 1 accuracy dynamically instead of hardcoding it — a hardcoded
+    # number here is exactly what caused a stale/misleading print statement last time.
+    stage1_total = 0
+    stage1_correct = 0
+    with open(INPUT_PATH) as f:
+        for line in f:
+            r = json.loads(line)
+            stage1_total += 1
+            if r["correct"]:
+                stage1_correct += 1
+    stage1_accuracy = stage1_correct / stage1_total
+ 
     print("\n--- DONE ---")
     print(f"Baseline-control accuracy: {correct_count}/{total} ({accuracy:.2%})")
     print("\nThis is the task-format-switch effect, isolated from any reordering.")
     print("Compare against:")
-    print(f"  Stage 1 (free generation): 90/100 (90.00%)")
-    print(f"  Partial (degenerate, order~unchanged): 32/38 (84.21%)")
-    print("\nUse THIS number, not Stage 1's, as the denominator for Robustness_tau")
-    print("when evaluating Reversed / Shuffled / Partial(non-degenerate).")
-
-
+    print(f"  Stage 1 (free generation): {stage1_correct}/{stage1_total} ({stage1_accuracy:.2%})")
+    print("\nUse the baseline-control number above (not Stage 1's), as the denominator")
+    print("for Robustness_tau when evaluating Reversed / Shuffled / Partial(non-degenerate).")
+    print("(Partial degenerate/non-degenerate split is NOT computed here — run that")
+    print("check separately against results/stage2_results_v2_trial1.jsonl.)")
+ 
+ 
 if __name__ == "__main__":
     run()
