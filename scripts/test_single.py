@@ -180,4 +180,60 @@ with open("results/stage2_results.jsonl") as f:
 
 for key in total_by_group:
     c, t = correct_by_group[key], total_by_group[key]
-    print(f"partial ({key}): {c}/{t} ({c/t:.2%})")
+    # print(f"partial ({key}): {c}/{t} ({c/t:.2%})")
+
+"""three records show parsed=None — problems 13, 28, and 67. A None means the parser found no "Final answer: X" line at all, not that it found a wrong number. """
+
+with open("results/stage2_baseline_control.jsonl") as f:
+    for line in f:
+        r = json.loads(line)
+        if r["problem_id"]== 67 and r["parsed_answer"] is None:
+            print("PROBLEM", r["problem_id"])
+            print(r["raw_response"])
+            # print("---")
+
+
+"""script to get the real flip-rate, per condition, which is more informative than any of the aggregate deltas """
+
+def load_by_problem(path, condition_filter=None):
+    records = {}
+    with open(path) as f:
+        for line in f:
+            r = json.loads(line)
+            if condition_filter and r.get("condition") != condition_filter:
+                continue
+            records[r["problem_id"]] = r["correct"]
+    return records
+
+# def compare_trials(trial1_path, trial2_path, condition_filter=None, label=""):
+#     t1 = load_by_problem(trial1_path, condition_filter)
+#     t2 = load_by_problem(trial2_path, condition_filter)
+#     common_ids = set(t1) & set(t2)
+
+#     flipped = [pid for pid in common_ids if t1[pid] != t2[pid]]
+#     print(f"{label}: {len(flipped)}/{len(common_ids)} problems flipped "
+#           f"({len(flipped)/len(common_ids):.1%})")
+#     if flipped:
+#         print(f"  flipped problem_ids: {sorted(flipped)}")
+
+# compare_trials("results/stage2_results.jsonl", "results/stage2_results_trial2.jsonl",
+#                "reversed", "Reversed")
+# compare_trials("results/stage2_results.jsonl", "results/stage2_results_trial2.jsonl",
+#                "shuffled", "Shuffled")
+# compare_trials("results/stage2_results.jsonl", "results/stage2_results_trial2.jsonl",
+#                "partial", "Partial")
+# compare_trials("results/stage2_baseline_control.jsonl", "results/stage2_baseline_control_trial2.jsonl",
+#                None, "Baseline-control")
+
+"""check problem 67's actual question/steps"""
+
+with open("data/stage1_baseline_reparsed.jsonl") as f:
+    for line in f:
+        r = json.loads(line)
+        if r["problem_id"] == 67:
+            print("QUESTION:", r["question"])
+            print("GROUND TRUTH:", r["ground_truth"])
+            print("\nORIGINAL STAGE 1 STEPS (in order):")
+            for i, step in enumerate(r["parsed_steps"], 1):
+                print(f"  {i}. {step}")
+            break

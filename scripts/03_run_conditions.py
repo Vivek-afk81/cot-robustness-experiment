@@ -24,7 +24,8 @@ CONDITION_FILES = {
     "shuffled": "data/stage2_shuffled.jsonl",
     "partial": "data/stage2_partial.jsonl",
 }
-OUTPUT_PATH = "results/stage2_results.jsonl"
+TRIAL = 2  # bump this each time you re-run — keeps trials distinguishable, never overwrites past runs
+OUTPUT_PATH = f"results/stage2_results_trial{TRIAL}.jsonl"
 SLEEP_SECONDS = 2.5  # same conservative gap as Stage 1, Groq free tier
 
 
@@ -65,6 +66,7 @@ def run():
             except Exception as e:
                 print(f"API ERROR: {e}")
                 error_record = {
+                    "trial": TRIAL,
                     "problem_id": record["problem_id"],
                     "bucket": record["bucket"],
                     "condition": condition,
@@ -96,6 +98,7 @@ def run():
             condition_total[condition] += 1
 
             result_record = {
+                "trial": TRIAL,
                 "problem_id": record["problem_id"],
                 "bucket": record["bucket"],
                 "condition": condition,
