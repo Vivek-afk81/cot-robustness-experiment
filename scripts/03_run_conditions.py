@@ -24,7 +24,7 @@ CONDITION_FILES = {
     "shuffled": "data/stage2_shuffled.jsonl",
     "partial": "data/stage2_partial.jsonl",
 }
-TRIAL = 1  # bump this each time you re-run — keeps trials distinguishable, never overwrites past runs
+TRIAL = 2  # bump this each time you re-run — keeps trials distinguishable, never overwrites past runs
 OUTPUT_PATH = f"results/stage2_results_v2_trial{TRIAL}.jsonl"
 SLEEP_SECONDS = 2.5  # same conservative gap as Stage 1, Groq free tier
 

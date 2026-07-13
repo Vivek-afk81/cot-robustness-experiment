@@ -26,7 +26,7 @@ from utils import get_model_response_stage2, parse_response, normalize_answer
 
 
 INPUT_PATH = "data/stage1_baseline_v2.jsonl"   #also updated this, same as Step 4
-TRIAL = 1
+TRIAL = 2
 OUTPUT_PATH = f"results/stage2_baseline_control_v2_trial{TRIAL}.jsonl"
 MIN_STEPS = 3
 SLEEP_SECONDS = 2.5
