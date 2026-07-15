@@ -261,7 +261,8 @@ def parse_h2_response(raw_text):
     justification = None
 
     for line in lines:
-        match = re.search(r"first divergence:?\s*(?:at\s*)?(?:step\s*)?(\d+|none)", line, re.IGNORECASE)
+        # match = re.search(r"first divergence:?\s*(?:at\s*)?(?:step\s*)?(\d+|none)", line, re.IGNORECASE)
+        match = re.search(r"first divergence:?\s*(?:step\s*)?(\d+|none)", line, re.IGNORECASE)
         if match:
             value = match.group(1).lower()
             divergence = "none" if value == "none" else int(value)

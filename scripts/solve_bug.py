@@ -291,6 +291,5 @@ import json
 with open("results/h2_self_report_trial1.jsonl") as f:
     for line in f:
         r = json.loads(line)
-        if r["problem_id"] == 48 and r["condition"] == "reversed":
-            print(r["raw_h2_response"])
-            break
+        first_line = (r["raw_h2_response"] or "").split("\n")[0]
+        print(r["problem_id"], r["condition"], "->", repr(first_line))
