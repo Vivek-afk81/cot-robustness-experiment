@@ -68,3 +68,11 @@ Fixed regex to accept both formats (N) and N.
 # print(steps)
 # print(answer)
 
+import json
+
+with open("results/stage2_results_v2_trial1.jsonl") as f:
+    for line in f:
+        r = json.loads(line)
+        if r["problem_id"] == 4 and r["condition"] == "reversed":
+            print(r["raw_response"])
+            break

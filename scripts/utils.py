@@ -190,3 +190,83 @@ def get_model_response_stage2(question, steps):
         messages=[{"role": "user", "content": prompt}]
     )
     return response.choices[0].message.content
+
+
+"""
+H2: first-error-position analysis. For a WRONG Stage 2 response (Reversed/
+Shuffled/Partial condition), asks the model to introspect on its own prior
+response and identify which step (by position IN THE ORDER IT WAS GIVEN,
+not the original correct order) is where its reasoning first diverged.
+
+Deliberately does NOT reveal the ground-truth answer in this prompt. Showing
+the correct answer would let the model work backward and confabulate a
+plausible-sounding divergence point rather than genuinely introspecting on
+its own reasoning trace — and it would make the manual spot-check agreement
+rate meaningless, since both would just be reading the same answer key.
+
+This is a self-report, not ground truth. Reliability is unknown until
+validated against a manual spot-check (see run_h2_manual_annotation.py,
+written separately) — state this caveat explicitly in the paper, don't treat
+self-report agreement as proven just because the model gives a confident
+answer.
+"""
+
+
+def build_h2_prompt(question, permuted_steps, model_response):
+    """
+    Shows the model the same permuted step list it originally received, plus
+    its own prior (wrong) response, and asks it to identify the first step
+    where its reasoning went off track.
+    """
+    numbered_steps = "\n".join(f"{i}. {step}" for i, step in enumerate(permuted_steps, 1))
+
+    prompt = f"""You previously attempted to solve a math problem using a given list of \
+reasoning steps, and your final answer was incorrect. Below is the problem, the exact \
+steps you were given (in the order you received them), and your prior response.
+
+Problem: {question}
+
+Steps you were given:
+{numbered_steps}
+
+Your prior response:
+{model_response}
+
+Looking back at your own reasoning above: at which numbered step (1 through \
+{len(permuted_steps)}) do you believe your reasoning FIRST went off track or became \
+inconsistent with the step you were given? If you believe every step was used correctly \
+and the error (if any) happened elsewhere, respond with "none".
+
+Respond with exactly one line in this format: "First divergence: <step number or none>"
+Then, on a new line, give at most one sentence of justification."""
+
+    return prompt
+
+
+def get_h2_self_report(question, permuted_steps, model_response):
+    """Send the H2 self-report prompt and return the raw response text."""
+    prompt = build_h2_prompt(question, permuted_steps, model_response)
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        temperature=0.0,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content
+
+
+def parse_h2_response(raw_text):
+    lines = [line.strip() for line in raw_text.split("\n") if line.strip()]
+
+    divergence = None
+    justification = None
+
+    for line in lines:
+        match = re.search(r"first divergence:?\s*(?:at\s*)?(?:step\s*)?(\d+|none)", line, re.IGNORECASE)
+        if match:
+            value = match.group(1).lower()
+            divergence = "none" if value == "none" else int(value)
+            continue
+        if divergence is not None and justification is None:
+            justification = line
+
+    return divergence, justification
