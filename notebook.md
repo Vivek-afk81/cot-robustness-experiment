@@ -235,27 +235,83 @@ known limitation : Partial-permutation degeneracy is not limited to exactly-3-st
   and there's no second annotator / inter-rater check yet).
 ---
  
-#### 7. Open methodological item — flagged, not yet resolved
+#### 7. Significance test on positional distribution — RESOLVED (was open)
  
-- A proper significance test on the positional distribution (e.g.
-  chi-square) must NOT use a flat uniform-over-all-observed-steps null,
-  because chains have different lengths (n_steps varies per case: a
-  divergence at "step 2" means something different in a 3-step vs. a
-  12-step chain).
-- Correct approach: null should be **uniform over 1..n_steps for each
-  individual case**, requiring per-case `n_steps` (already present in the
-  joined records via `08_h2_careful_analysis.py`'s `load_data()`).
-- **Not yet run.** Next actionable step before finalizing H2 stats section.
+**Status update: this item is no longer open.** Ran a length-aware
+significance test on the careful-annotation positional distribution
+(n=30 numeric-divergence cases; chain lengths ranged 3–15 steps, e.g.
+Counter({5:6, 6:6, 4:5, 7:5, 10:2, 15:2, 8:2, 9:1, 3:1}), max step=15).
+
+**Method:** null hypothesis = divergence position uniform over 1..n_steps
+*per individual case* (not a flat uniform over all observed step values —
+that would be wrong given varying chain lengths). Expected counts per step
+computed accordingly; bins with E<1 merged into an overflow bin before the
+chi-square approximation, per standard practice with sparse expected counts.
+Cross-checked the analytical result with a 10,000-draw Monte Carlo
+permutation test, since several bins still had E<5 even after merging
+(chi-square approximation flagged as weak in that regime).
+
+**Result:**
+- Chi-square(7) = 6.513, analytical p = 0.4812
+- Monte Carlo p = 0.4178 (4,178/10,000 simulated draws met or exceeded the
+  observed chi-square)
+- **Fail to reject H0 at α=0.05 by both methods.**
+
+**Interpretation — important, do not overstate Section 2's clustering
+claim without this context:** the early-clustering pattern described in
+Section 2 (co-modal Steps 1–2, 73% within first 3 steps) is visually
+consistent but **not statistically distinguishable from a uniform
+distribution** once chain-length is properly accounted for. This mirrors
+H1's own result (a consistent directional pattern that doesn't survive
+correction at this sample size) — report both as the same honest kind of
+finding: real-looking pattern, underpowered to confirm at n=30/n=89.
+**Do not claim statistically significant positional clustering in the
+paper.** The taxonomy finding (Section 4, SELF-BREAK dominant) is
+unaffected by this — it's a categorical result, not a positional one.
 ---
  
-#### 8. Single-sentence summary to reuse in the paper draft
+#### 8. Single-sentence summary to reuse in the paper draft — REVISED
  
-> Rule-based human annotation of 35 Stage-2 failure cases shows reasoning
+> ~~Rule-based human annotation of 35 Stage-2 failure cases shows reasoning
 > divergence concentrated in the first 3 steps (73%, co-modal at Steps 1–2),
-> earlier than the position the model itself self-reports (mode Step 3);
-> the dominant failure mode (50%) is the model explicitly flagging an
-> inconsistency and continuing anyway rather than correcting or misreading
-> a step outright (0% MISUSE).
+> earlier than the position the model itself self-reports (mode Step 3)~~
+ 
+**Revised per item 7 above — the original summary sentence overstates the
+positional finding and should not be used as-is.** Corrected version:
+ 
+> Rule-based human annotation of 35 Stage-2 failure cases shows an
+> early-leaning divergence pattern (co-modal at Steps 1–2, 73% within the
+> first 3 steps) that is directionally earlier than the position the model
+> itself self-reports (mode Step 3) — but a length-aware significance test
+> (chi-square + Monte Carlo, n=30) fails to distinguish this pattern from a
+> uniform distribution, so the positional claim is reported as suggestive,
+> not confirmed. The dominant failure mode (50%) is the model explicitly
+> flagging an inconsistency and continuing anyway rather than correcting or
+> misreading a step outright (0% MISUSE) — this categorical finding is
+> unaffected by the positional test.
+---
+
+#### 9. Decision: dropped dedicated error-analysis case studies
+
+Originally scoped (Day 33 roadmap) as individual deep-dive write-ups on
+problem_ids #6 (Stephen's loan), #67 (Jenna's apples), #69 (Britany's
+TikTok time). **Decision: dropped, not carried forward.**
+
+Two of the three (#6, #69) already received qualitative write-ups above
+under [10-07-2026], as part of Stage 1 validation — those descriptions
+stand and are not being redone. #67 never received individual treatment
+and will not now, either.
+
+**Rationale:** the rule-based H2 taxonomy (item 4 above) already
+generalizes what three hand-picked anecdotes were meant to illustrate,
+across all 30 classified cases rather than 2–3 examples. Given the null
+result on positional significance (item 7), effort is better spent on
+writeup synthesis than additional qualitative case studies that wouldn't
+change the statistical picture. If the paper draft later needs a specific
+illustrative quote, pull from the existing 35-case annotation sheet rather
+than reopening this as a separate task.
+
+---
 
 ## Open items / deferred decisions
 
@@ -263,3 +319,4 @@ known limitation : Partial-permutation degeneracy is not limited to exactly-3-st
 - Exact answer-normalization edge cases (units, currency symbols) — deliberately minimal
   for now, will expand if a real mismatch is found
 - Rate-limit backoff strategy specifics — not yet needed, current sleep(2.5) sufficient
+- Days 36–40 cross-model block — not started
