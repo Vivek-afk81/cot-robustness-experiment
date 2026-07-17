@@ -41,7 +41,7 @@ API, so no local GPU/compute is used and Colab offers no benefit here.
 
 ## Log
 
-### [Date] — Dataset construction
+### [] — Dataset construction
 Pulled GSM8K test split (1,319 problems) from `github.com/openai/grade-school-math`.
 Built a stratified 100-problem subset, 25 each from 2-step / 3-step / 4-step / 5+-step
 buckets (bucket = calculator-annotated line count in the *reference* solution — a proxy

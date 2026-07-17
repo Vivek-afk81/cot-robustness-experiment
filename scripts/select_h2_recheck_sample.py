@@ -22,11 +22,15 @@ actual filenames.
 import json
 import random
 
-MANUAL_SHEET_PATH = "data/h2_manual_annotation_sheet.jsonl"   
-ANNOTATION_KEY_PATH = "data/h2_manual_answer_key.jsonl"          
-                                                        
+MANUAL_SHEET_PATH = "data/h2_manual_annotation_sheet.jsonl"
+ANNOTATION_KEY_PATH = "data/h2_manual_answer_key.jsonl"
 OUTPUT_PATH = "results/h2_recheck_sample_blind.jsonl"
-SEED = 42  # fixed, so the sample is reproducible if you need to re-run this
+SEED = 77  # different from the earlier (contaminated) sample
+
+# These 8 were already revealed to you in the earlier (invalid) recheck --
+# explicitly excluded so there's zero chance of overlap, rather than relying
+# on a different seed alone (which doesn't guarantee no overlap by itself).
+ALREADY_REVEALED_INDICES = {2, 4, 5, 8, 16, 18, 24, 35}
 
 
 def load_all():
@@ -41,12 +45,14 @@ def load_all():
 def run():
     sheet = load_all()
     all_indices = sorted(sheet.keys())
+    eligible_indices = [i for i in all_indices if i not in ALREADY_REVEALED_INDICES]
 
     rng = random.Random(SEED)
-    sample_indices = rng.sample(all_indices, 8)
+    sample_indices = rng.sample(eligible_indices, 8)
     sample_indices.sort()
 
-    print(f"Selected 8 random indices (seed={SEED}, reproducible): {sample_indices}\n")
+    print(f"Excluded (already revealed to you): {sorted(ALREADY_REVEALED_INDICES)}")
+    print(f"Selected 8 FRESH random indices (seed={SEED}, reproducible): {sample_indices}\n")
     print("=" * 70)
 
     output_records = []
