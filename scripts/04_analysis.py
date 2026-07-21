@@ -121,9 +121,9 @@ def mcnemar_exact(correct_a, correct_b, label_a, label_b, alpha=0.05, bonferroni
 # ---------------------------------------------------------------------------
 
 def analyze_trial(trial):
-    print("\n" + "#" * 60)
+    print("\n" + "-" * 60)
     print(f"# TRIAL {trial}")
-    print("#" * 60)
+    print("-" * 60)
 
     results_records = load_records(RESULTS_PATH_TEMPLATE.format(trial=trial))
     baseline_records = load_records(BASELINE_CONTROL_PATH_TEMPLATE.format(trial=trial))
@@ -212,9 +212,9 @@ def run():
     trial_data = {trial: analyze_trial(trial) for trial in TRIALS}
 
     if len(TRIALS) >= 2:
-        print("\n" + "#" * 60)
+        print("\n" + "-" * 60)
         print("# CROSS-TRIAL COMPARISON (all trial pairs)")
-        print("#" * 60)
+        print("-" * 60)
         print("Reported as a stated limitation (temp=0.0 non-determinism), not")
         print("averaged away. See project handoff Section 6 for background.")
 
@@ -230,15 +230,6 @@ def run():
                     trial_data, t1, t2, "partial", "Partial",
                     degenerate_flags=trial_data[t1]["degenerate_flags"],
                 )
-
-    print("\n" + "#" * 60)
-    print("# NOT YET IMPLEMENTED: H2 (first-error-position analysis)")
-    print("#" * 60)
-    print("Requires knowing which step position the model's reasoning first")
-    print("diverged at for the Shuffled condition -- needs either manual")
-    print("annotation of a sample, or a separate model call asking it to")
-    print("identify where it got confused. Design as a follow-up, not skipped.")
-
 
 if __name__ == "__main__":
     run()

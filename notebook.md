@@ -825,10 +825,181 @@ they can each serve a distinct, useful role in this same investigation, essentia
 
 2. Partial — actually a cleaner comparison than either. By design, Partial keeps the first and last step fixed — meaning the true final step never moves in this condition. So Partial is structurally immune to the position-1 confound entirely: any accuracy drop or hold in Partial reflects purely "does scrambling the middle, non-answer-bearing steps matter," with zero interference from where the answer sits. If Partial accuracy comes back high, that's a genuinely clean piece of evidence for order-insensitivity on the non-critical steps — no confound to explain away.
 
+### [21-07-2026] — Parser fix applied in-place; H1 stats reconfirmed; H2 integrity check flagged
+
+**Covers work not logged on 20-07-2026** (the normalize_answer fix was
+identified and validated read-only on 20-07-2026 via
+17_rescore_with_fixed_normalizer.py; applying it in-place and
+re-running downstream analysis happened today).
+
+**1. Applied the normalizer fix in place (18_apply_normalizer_fix.py).**
+17_rescore_with_fixed_normalizer.py was read-only by design -- it reported
+old-vs-new accuracy but never wrote anything back to disk. Today's script
+actually rewrites the stored `correct` field in every affected results
+file (Llama trial 1/2 Stage 2 + baseline-control, Qwen 27B
+baseline-control + Stage 2), with automatic `.bak` backups before each
+overwrite.
+
+**2. Re-ran 04_analysis.py with corrected data. H1's conclusion is
+UNCHANGED.** Corrected baseline-control: 86/89 (96.63%) both trials
+(up from 85/89). No McNemar comparison survives Bonferroni correction in
+either trial -- tightest p-value is now 0.0215 (Baseline-control vs.
+Partial non-degenerate, trial 1; previously 0.0391), still far above the
+corrected threshold of 0.0083. Direction of effect (every perturbed
+condition scores below baseline-control) holds in both trials, matching
+the pre-fix finding. **This is the final, corrected version of H1's
+numbers -- use these, not the pre-fix numbers, in the paper.**
+
+**Note on why one comparison's p-value didn't move at all:** problem 5
+(the recurring "62.00" vs "62" formatting case) flipped wrong->correct in
+baseline-control, reversed, AND shuffled simultaneously for trial 1 --
+since it flipped in both columns of the Baseline-vs-Reversed comparison,
+it moved from "both wrong" to "both correct" without ever becoming a
+discordant pair, so that specific p-value (0.0352) is byte-identical
+before and after the fix. Baseline-vs-Partial DID shift, because problem
+5's Partial-condition flip only occurred in trial 2, not trial 1 --
+creating a new discordant pair in trial 1 specifically. Worth this exact
+explanation if anyone asks why the correction affected some comparisons
+and not others.
+
+**3. Cross-trial comparison also updated.** Partial's trial1-vs-trial2
+flip list now correctly includes problem 5 in the wrong->correct set
+(previously showed 3 flips [20, 42, 68]; now shows 4 [5, 20, 42, 68]),
+consistent with problem 5's Partial-condition fix landing only in trial 2.
+
+**4. FLAGGED, NOT YET RESOLVED -- possible H2 integrity issue.**
+05_h2_self_report.py pulled its 35 wrong-answer cases specifically from
+`results/stage2_results_v2_trial1.jsonl` -- the exact file just corrected.
+If problem 5 (reversed) and/or problem 5 (shuffled) from trial 1 were
+among the original 35 "wrong" records used for the blind manual
+annotation and rule-based taxonomy (Days 33-34), those records are no
+longer wrong post-fix and should be REMOVED from the H2 analysis pool --
+which would shift n=35 downward, and potentially affect:
+  - the Step 1/2 co-modal positional finding
+  - the SELF-BREAK (50%) failure-mode taxonomy percentages
+  - the chi-square/Monte Carlo null result on positional clustering
+**Action required before finalizing H2's numbers for the paper:** check
+whether problem_id=5 (condition reversed or shuffled) appears in
+`results/h2_self_report_trial1.jsonl` or
+`data/h2_manual_annotation_sheet.jsonl`. If it does, remove that record
+and recompute H2's distributions/percentages/chi-square with n=33 or
+n=34 (however many records remain). If it does not appear (e.g. it wasn't
+sampled among the wrong answers for some other reason), H2 is unaffected
+and this item can be closed as a non-issue.
+
+**Status: H1 numbers are now final and corrected. H2 numbers are
+PROVISIONAL pending the integrity check above -- do not finalize the H2
+section of the paper until this is resolved.**
+
+### Parser fix applied in-place; H1 stats reconfirmed; H2 integrity check flagged
+ 
+**Covers work not logged on 20-07-2026** (the normalize_answer fix was
+identified and validated read-only on 20-07-2026 via
+17_rescore_with_fixed_normalizer.py; applying it in-place and
+re-running downstream analysis happened today).
+ 
+**1. Applied the normalizer fix in place (18_apply_normalizer_fix.py).**
+17_rescore_with_fixed_normalizer.py was read-only by design -- it reported
+old-vs-new accuracy but never wrote anything back to disk. Today's script
+actually rewrites the stored `correct` field in every affected results
+file (Llama trial 1/2 Stage 2 + baseline-control, Qwen 27B
+baseline-control + Stage 2), with automatic `.bak` backups before each
+overwrite.
+ 
+**2. Re-ran 04_analysis.py with corrected data. H1's conclusion is
+UNCHANGED.** Corrected baseline-control: 86/89 (96.63%) both trials
+(up from 85/89). No McNemar comparison survives Bonferroni correction in
+either trial -- tightest p-value is now 0.0215 (Baseline-control vs.
+Partial non-degenerate, trial 1; previously 0.0391), still far above the
+corrected threshold of 0.0083. Direction of effect (every perturbed
+condition scores below baseline-control) holds in both trials, matching
+the pre-fix finding. **This is the final, corrected version of H1's
+numbers -- use these, not the pre-fix numbers, in the paper.**
+ 
+**Note on why one comparison's p-value didn't move at all:** problem 5
+(the recurring "62.00" vs "62" formatting case) flipped wrong->correct in
+baseline-control, reversed, AND shuffled simultaneously for trial 1 --
+since it flipped in both columns of the Baseline-vs-Reversed comparison,
+it moved from "both wrong" to "both correct" without ever becoming a
+discordant pair, so that specific p-value (0.0352) is byte-identical
+before and after the fix. Baseline-vs-Partial DID shift, because problem
+5's Partial-condition flip only occurred in trial 2, not trial 1 --
+creating a new discordant pair in trial 1 specifically. Worth this exact
+explanation if anyone asks why the correction affected some comparisons
+and not others.
+ 
+**3. Cross-trial comparison also updated.** Partial's trial1-vs-trial2
+flip list now correctly includes problem 5 in the wrong->correct set
+(previously showed 3 flips [20, 42, 68]; now shows 4 [5, 20, 42, 68]),
+consistent with problem 5's Partial-condition fix landing only in trial 2.
+ 
+**4. RESOLVED — H2 integrity check.** Checked both files directly:
+  - `results/h2_self_report_trial1.jsonl`: problem_id=5 DOES appear, for
+    both `condition: reversed` and `condition: shuffled` (expected -- this
+    file was built from ALL wrong Stage-2-trial-1 records at the time,
+    before the normalizer fix).
+  - `data/h2_manual_annotation_sheet.jsonl`: problem_id=5 does NOT appear
+    (the 35-case sample happened not to draw it).
+**Conclusion: the CANONICAL H2 numbers are unaffected.**
+`08_h2_careful_analysis.py` -- the script designated canonical for the
+paper -- reads from `data/h2_manual_annotation_sheet.jsonl`, not the
+self-report file. Since problem 5 was never in that 35-case sample, none
+of the following require any correction:
+  - the co-modal Step 1/2 positional finding (8/30 each)
+  - the SELF-BREAK (50%) failure-mode taxonomy
+  - the careful-vs-self-report agreement rates (60% combined)
+  - the chi-square/Monte Carlo null result on positional clustering
+**Minor, non-headline staleness (optional cleanup, not urgent):** the
+VERY FIRST self-report-only distribution reported on Day 32 (before the
+careful-annotation pass existed) -- "divergence clusters at Step 3,
+11/35" via `analyze_h2_distribution.py` -- technically includes problem
+5's two now-invalid "wrong" entries. This number was already superseded
+in the writeup by the careful-annotation contradiction finding and is not
+used as a headline result, so this is a footnote-level correction, not a
+blocking one. If revisited: recompute against n=33 (35 minus the 2 now-
+invalid problem-5 entries) for full internal consistency.
+ 
+**Status: BOTH H1 and H2 numbers are now final.** No further corrections
+pending.
+ 
+---
+ 
+### What's next
+ 
+1. **(Optional, low priority)** Recompute the Day-32 self-report-only
+   distribution against n=33, for internal consistency -- not blocking,
+   since this number isn't used as a headline finding in the paper
+2. Update `readme.md`'s paper-ready summary sentences (Section 8 of the
+   17-07-2026 entry) to cite the corrected H1 numbers (86/89 baseline-
+   control, tightest p=0.0215) instead of the pre-fix ones
+3. Resume the Days 36-40 cross-model/cross-size thread status: Mistral
+   and Qwen 27B blocks are both closed (see their respective readme
+   entries); no further model attempts planned
+4. **Both H1 and H2 are now fully finalized. Begin paper draft assembly**
+   (originally scoped as Day 40) -- abstract, intro, related work, and
+   methods are largely already written via the README log; results and
+   discussion sections can now be drafted against final, confirmed numbers
+---
+
+### What's next
+
+1. **Resolve the H2 integrity check above** (highest priority --
+   determines whether any already-reported H2 numbers need revision)
+2. If H2 needs revision: re-run the relevant portions of
+   `08_h2_careful_analysis.py` and the chi-square test with the corrected
+   pool size
+3. Once both H1 and H2 are confirmed final: update `readme.md`'s
+   paper-ready summary sentences (Section 8 of the 17-07-2026 entry) to
+   cite the corrected numbers, not the pre-fix ones
+4. Resume the Days 36-40 cross-model/cross-size thread status: Mistral
+   and Qwen 27B blocks are both closed (see their respective readme
+   entries); no further model attempts planned
+5. Begin paper draft assembly (originally scoped as Day 40) now that H1
+   is fully finalized and H2 is one integrity check away from the same
 
 ## Open items / deferred decisions
 
-- Exact answer-normalization edge cases (units, currency symbols) — deliberately minimal
+- Exact answer-normalization edge cases (units, currency symbols) — deliberately minimal- done updated the normalize_answer
   for now, will expand if a real mismatch is found
 - Rate-limit backoff strategy specifics — not yet needed, current sleep(2.5) sufficient
 ---
