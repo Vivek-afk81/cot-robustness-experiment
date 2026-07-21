@@ -59,16 +59,42 @@ def parse_response(raw_text):
 
 
 def normalize_answer(answer):
-    """Basic normalization so parsed and ground-truth answers compare cleanly.
-    Deliberately basic for now — exact edge cases (units, currency) deferred."""
+    """
+    Normalization so parsed and ground-truth answers compare cleanly.
+
+    FIXED (see readme log, Qwen 27B H3 run): the original version only
+    stripped a single trailing ".0" (e.g. "62.0" -> "62"), missing
+    multi-zero decimals like "2.00" or "6.00" -- common when a model
+    formats a currency-style answer with two decimal places. This
+    silently under-counted accuracy across every condition/model that
+    used this function (confirmed: 5 of 273 Qwen 27B Stage-2 "errors"
+    were exactly this false-negative pattern -- "2.00" vs ground truth
+    "2", etc.).
+
+    Fix: after stripping $ and , as before, convert to float and back to
+    a canonical string. This collapses "2.00", "2.0", and "2" to the same
+    normalized value regardless of how many trailing zeros are present,
+    while falling back to the original minimal string cleanup for
+    non-numeric/malformed inputs so this doesn't crash on edge cases
+    (e.g. answers that aren't cleanly numeric for some reason).
+    """
     if answer is None:
         return None
     answer = str(answer).strip()
     answer = answer.replace("$", "").replace(",", "")
     answer = answer.rstrip(".")
-    if answer.endswith(".0"):
-        answer = answer[:-2]
-    return answer
+
+    try:
+        value = float(answer)
+        if value == int(value):
+            return str(int(value))
+        return str(value)
+    except (ValueError, OverflowError):
+        # Not a clean float -- fall back to the original minimal cleanup
+        # rather than crashing on malformed/non-numeric input.
+        if answer.endswith(".0"):
+            answer = answer[:-2]
+        return answer
 
 
 #stage 2

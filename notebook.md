@@ -653,8 +653,182 @@ that avoids all three identified failure modes simultaneously (e.g.
 steps that require withheld intermediate values not stated inline --
 out of scope for the current timeline).**
 
+
+### [19-07-2026] — H3 cross-size comparison: qwen/qwen3.6-27b (trial run)
+
+**Decision:** The original H3 called for a *smaller* model than Llama-3.1-8B.
+No sub-8B model is currently available on Groq's free tier.
+Instead, running qwen/qwen3.6-27b (~27B) as a **cross-size check in the
+other direction** (larger, not smaller).  Framing: does a stronger model show
+more or less robustness to step-order permutation?  This is NOT a H3 test --
+it is a **cross-size directional check** and will be labeled as such in the
+paper.
+
+**Model: qwen/qwen3.6-27b** (preview, Groq, ~27B dense parameters)
+
+**Implementation note -- reasoning_effort fix (critical):**
+Qwen 3.6 27B is a hybrid thinking/non-thinking model.  Without explicit
+configuration, it operates in thinking mode and outputs only a `<think>...</think>`
+block, never emitting the "Final answer: <number>" line the parser expects.
+Fix: `reasoning_effort="none"` in every API call disables the think block and
+forces direct formatted output.  Temperature set to 0.7 per Groq's
+non-thinking mode best-practice (temperature=0.0 produces degenerate output in
+non-thinking mode for this model family).  The key consistency note: Stage 1
+and Stage 2 calls both use the same temperature/reasoning_effort pair, so the
+comparison is internally consistent even if not identical to the Llama 0.0
+setting.
+
+**Feasibility test result (1 problem before full run):**
+- Problem 0 (Maggie's oven), ground truth 500
+- Parsed 8 steps cleanly, Final answer = 500, correct = True
+- No `<think>` block in output after fix
+
+**Pipeline scripts created:**
+- `scripts/utils_h3.py` — model utilities (MODEL_ID = qwen/qwen3.6-27b)
+- `scripts/11_h3_generate_baseline.py` — Stage 1 baseline (100 problems)
+- `scripts/12_h3_permute_conditions.py` — generate reversed/shuffled/partial condition files
+- `scripts/13_h3_run_conditions.py` — Stage 2: run 3 conditions
+- `scripts/13b_h3_run_baseline_control.py` — Stage 2: baseline-control (unpermuted steps)
+- `scripts/14_h3_analysis.py` — accuracy, Robustness_tau, McNemar, cross-model table
+
+**Status: Stage 1 run in progress.** Results will be added here once complete.
+
+What we actually got from the run
+
+| Condition | Records | Clean calls | Error calls | Correct |
+|-----------|--------:|------------:|------------:|---------:|
+| Baseline-control | 91 | 91 | 0 | 89/91 (97.8%) |
+| Reversed | 91 | 90 | 1 | 89/91 (97.8%) |
+| Shuffled | 91 | 48 | 43 | 48/48 of clean |
+| Partial | 57 | 3 | 54 | 3/3 of clean |
+
+The shuffled and partial conditions got hammered by rate limits (preview model on free tier). But the baseline-control and reversed are complete and clean.
+
+### [20-07-2026] - [Cross-size check] — qwen/qwen3.6-27b: a third, distinct mechanism (neither bypass nor clean robustness)
+
+**Setup:** qwen/qwen3.6-27b via Groq, framed explicitly as a cross-size
+directional check (larger than Llama-3.1-8B, not the smaller model H3
+originally called for -- no sub-8B model is available on Groq's free
+tier). NOT an H3 test; labeled as such throughout.
+ 
+**Implementation note:** Qwen 3.6 27B is a hybrid thinking/non-thinking
+model. Left unconfigured, it emits only a `<think>` block and never a
+parseable final answer. Fixed via `reasoning_effort="none"` (disables the
+think block) and `temperature=0.7` (0.0 produced degenerate output in
+non-thinking mode, per the model family's own guidance). Both Stage 1 and
+Stage 2 calls use this same setting, keeping the comparison internally
+consistent.
+ 
+**Aggregate result (baseline-control vs. Reversed, n=91 matched
+problems):** 97.8% both conditions, Robustness_tau = 1.000 -- superficially
+identical to the ministral-8b-2512 result that turned out to be bypass.
+ 
+**This did NOT turn out to be bypass.** Ran the same validation used for
+Mistral (15_spotcheck_qwen_bypass.py): full character-similarity pass
+across all 91 matched problems, plus manual reading of an 8-case sample.
+ 
+| Category | n | % |
+|---|---|---|
+| IDENTICAL (exact char match) | 0 | 0.0% |
+| NEAR-IDENTICAL (>=90% similarity) | 8 | 8.8% |
+| DIFFERENT (<90% similarity) | 83 | 91.2% |
+ 
+This is the opposite pattern from Mistral (94.4% identical/near-identical
+there vs. 8.8% here). Ruling out simple bypass required reading the actual
+text, not just this number -- consistent with the standing project rule
+that surface differentness doesn't by itself prove genuine engagement
+(the Mistral stepwise-prompt attempt showed different-looking responses
+can still hide an unrelated artifact).
+ 
+**Manual read of 8 sampled response pairs revealed TWO distinct
+sub-mechanisms, neither of them bypass:**
+ 
+**Mechanism A -- genuine dependency reconstruction (5/8 sampled cases:
+39, 43, 34, 94, 20).** The model recognizes the TRUE logical dependency
+order of the steps regardless of presentation order, and silently
+resequences its own computation to match that true order, while labeling
+each block with the position number it held in the (reversed) list shown.
+Problem 39 is the clearest example: presented in order [reward-addition,
+total-salary, weeks, new-salary, raise, initial-salary], the model computed
+in the CORRECT dependency order (initial-salary -> raise -> new-salary ->
+weeks -> total-salary -> reward-addition), labeling each block "Step 6,"
+"Step 5," etc. to match its position in the presented list. This reflects
+real content-level engagement, not a fresh from-scratch solve and not a
+literal-order transcription.
+ 
+**Mechanism B -- pre-baked value extraction (3/8 sampled cases: 97, 25,
+92).** The model processes steps in literal presented order and succeeds,
+but succeeds trivially: each Stage-1-generated GSM8K step already states
+its own computed numeric result inline (a known property of this
+project's CoT generation format), so "using" a step in presented order
+requires reading off an already-present number, not resolving any real
+dependency.
+ 
+**The confound that limits how strongly this can be reported:** Reversed
+always places the ORIGINAL FINAL step -- which in GSM8K CoT chains
+generated by this pipeline almost always states the answer directly -- at
+position 1 of the presented list. A model with strong reading
+comprehension can therefore get Reversed correct by locating and reading
+position 1's stated conclusion alone, regardless of whether it does real
+dependency reasoning (Mechanism A) or trivial extraction (Mechanism B).
+Problem 39 is reassuring on this point -- the model did a full 6-step
+reconciliation rather than taking the position-1 shortcut that was sitting
+right there -- but this does not rule out the shortcut being taken in
+other, unsampled cases. This is structurally the same underlying design
+weakness that undid Mistral's third (stepwise) prompt attempt -- steps
+that embed their own computed values -- manifesting differently here:
+Mistral exploited it via blind transcription; Qwen's high accuracy is
+consistent with genuine reasoning, trivial extraction, or some mix, and
+the current data cannot cleanly separate these from each other.
+ 
+**Conclusion: this is a third, distinct mechanism from Mistral's clean
+bypass, and it should NOT be reported as either (a) "confirmed genuine
+robustness" or (b) "the same bypass pattern as Mistral."** Both of those
+framings would overclaim past what an 8-case manual sample can support.
+The honest framing is a middle position: Qwen's Reversed accuracy is
+CONSISTENT WITH genuine order-robustness at this model scale, but not
+cleanly separable from a step-self-containment confound inherent to this
+project's Stage-1 CoT generation format.
+ 
+**Decision: closing the cross-size check here on the current sample.**
+Same reasoning as the Mistral closure -- avoiding an open-ended chase for
+a "clean" number. However, unlike Mistral (where three attempts
+converged on "this model bypasses, full stop"), Qwen's result is
+genuinely more interesting and less settled, and is worth strengthening
+if reasonably cheap to do so (see recommendations below) before finalizing
+how it's reported in the paper.
+ 
+**Shuffled and Partial conditions were rate-limited (48/91 and 3/57 clean
+calls respectively) and are NOT being chased to completion** -- consistent
+with the decision not to spend further budget completing conditions once
+the core mechanism question (bypass vs. not) is already answered from
+Reversed alone.
+ 
+**Status: H3 remains untested (unchanged). Cross-size check for
+qwen/qwen3.6-27b is a third, distinct finding -- neither bypass (Mistral)
+nor clean robustness -- and is provisionally closed pending the
+strengthening steps below.**
+ 
+---
+ 
+### What would make this finding more robust (recommendations, not yet done)
+ 
+#### the middle-swap test
+
+Design: take each eligible problem's original, correct-order steps and swap only the final step (which states the answer) with the step sitting at the middle index — everything else stays in its natural, logical order. This isolates exactly one variable: does moving the answer-bearing step away from its natural end position (without introducing any other disruption) hurt accuracy? If accuracy holds, that's real evidence against "the model just reads whatever's at the position where the answer usually sits." If it collapses, that's evidence for the shortcut concern.
+
+#### What to do with Shuffled/Partial once rate limits clear
+
+they can each serve a distinct, useful role in this same investigation, essentially for free once the data exists.
+
+1. Shuffled — bin by where the true final step landed. Unlike Reversed (which always puts it at position 1) and unlike this new middle-swap test (which always puts it at the middle), Shuffled randomizes the final step's landing position across the whole range. Once you have clean Shuffled data, you can group per-problem correctness by "what position did the true final/answer step land at in this problem's shuffle" and check whether accuracy correlates with that position. This is essentially a natural, higher-powered version of the middle-swap test, using data you were going to collect anyway — no extra API calls beyond what's already planned. I can write that binning/analysis script now if you want, so it's ready the moment Shuffled clears.
+
+2. Partial — actually a cleaner comparison than either. By design, Partial keeps the first and last step fixed — meaning the true final step never moves in this condition. So Partial is structurally immune to the position-1 confound entirely: any accuracy drop or hold in Partial reflects purely "does scrambling the middle, non-answer-bearing steps matter," with zero interference from where the answer sits. If Partial accuracy comes back high, that's a genuinely clean piece of evidence for order-insensitivity on the non-critical steps — no confound to explain away.
+
+
 ## Open items / deferred decisions
+
 - Exact answer-normalization edge cases (units, currency symbols) — deliberately minimal
   for now, will expand if a real mismatch is found
 - Rate-limit backoff strategy specifics — not yet needed, current sleep(2.5) sufficient
-- Days 36–40 cross-model block — not started
+---

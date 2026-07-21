@@ -1,0 +1,69 @@
+﻿Total wrong answers: 5
+
+--- PROBLEM 8, CONDITION: reversed ---
+Ground Truth: 2
+Parsed Answer: 2.00
+Norm Parsed: Not saved, will re-eval
+Raw Response Fragment:
+al trip over the course of the week. Each trip costs $2.20: $10 \text{ trips} \times \$2.20/\text{trip} = \$22.00$
+
+Finally, calculate the savings by comparing the cost of individual trips to the cost of the weekly bus pass. The weekly pass costs $20: $\$22.00 - \$20.00 = \$2.00$
+
+Final answer: 2.00
+
+
+--- PROBLEM 90, CONDITION: reversed ---
+Ground Truth: 6
+Parsed Answer: 6.00
+Norm Parsed: Not saved, will re-eval
+Raw Response Fragment:
+**Compare the costs to find the better price:** *   Cost of Option A: $15.00. *   Cost of Option B: $9.00. *   Option B is the better price because $9.00 < 15.00$.
+1. **Calculate the savings:** *   Savings = Cost of Option A - Cost of Option B *   Savings = $15.00 - 9.00 = 6.00$.
+
+Final answer: 6.00
+
+
+--- PROBLEM 90, CONDITION: shuffled ---
+Ground Truth: 6
+Parsed Answer: 6.00
+Norm Parsed: Not saved, will re-eval
+Raw Response Fragment:
+2.50 = 15.00$.
+
+This confirms the cost of Option A is $15.00.
+
+**Conclusion**
+Following the logic presented in Step 3, the savings are calculated by subtracting the cost of the better option (Option B) from the cost of the other option (Option A).
+Savings = $15.00 - 9.00 = 6.00$.
+
+Final answer: 6.00
+
+
+--- PROBLEM 8, CONDITION: partial ---
+Ground Truth: 2
+Parsed Answer: 2.00
+Norm Parsed: Not saved, will re-eval
+Raw Response Fragment:
+ trip over the course of the week. Each trip costs $2.20: $10 \text{ trips} \times \$2.20/\text{trip} = \$22.00$
+3. Finally, calculate the savings by comparing the cost of individual trips to the cost of the weekly bus pass. The weekly pass costs $20: $\$22.00 - \$20.00 = \$2.00$
+
+Final answer: 2.00
+
+
+--- PROBLEM 90, CONDITION: partial ---
+Ground Truth: 6
+Parsed Answer: 6.00
+Norm Parsed: Not saved, will re-eval
+Raw Response Fragment:
+e contains 3 flowers.
+*   Number of packages needed: $18 / 3 = 6$ packages.
+*   Cost per package: $2.50.
+*   Total cost for Option A: $6 \times 2.50 = 15.00$.
+
+**Step 5: Calculate the savings**
+*   Savings = Cost of Option A - Cost of Option B
+*   Savings = $15.00 - 9.00 = 6.00$.
+
+Final answer: 6.00
+
+
