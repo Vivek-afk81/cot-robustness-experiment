@@ -41,7 +41,7 @@ API, so no local GPU/compute is used and Colab offers no benefit here.
 
 ## Log
 
-### [] — Dataset construction
+### [10-07-2026] — Dataset construction
 Pulled GSM8K test split (1,319 problems) from `github.com/openai/grade-school-math`.
 Built a stratified 100-problem subset, 25 each from 2-step / 3-step / 4-step / 5+-step
 buckets (bucket = calculator-annotated line count in the *reference* solution — a proxy
@@ -49,7 +49,7 @@ measure, stated here as a methodology caveat, not a formal definition). Pool siz
 sampling: 326/371/297/325. Seed=42 for reproducibility. Saved to
 `data/day27_gsm8k_subset.json`.
 
-### [Date] — Stage 1 prompt + parser development
+### [10-07-2026] — Stage 1 prompt + parser development
 Wrote `scripts/test_single.py` to test the Stage 1 prompt and response format on one
 problem before committing to a full run.
 
@@ -116,10 +116,278 @@ known limitation : Partial-permutation degeneracy is not limited to exactly-3-st
 ### [11-07-2026] — Stage 2 permutation engine
 
 
+Finished validating the Stage 1 baseline (100 GSM8K problems, model generates
+its own CoT, `llama-3.1-8b-instant` via Groq) — landed at 90% accuracy, which
+sits inside the range reported by a recent robustness paper I read as part of
+my novelty check. Good sign the pipeline itself is sound.
+
+Then moved into Stage 2: taking the 89 problems the model got right with 3+
+reasoning steps, and generating three broken-order versions of each one —
+reversed, randomly shuffled, and a "partial" version where I keep the first
+and last step in place and only scramble the middle. The idea is simple: the
+*content* of the reasoning stays exactly the same, only the *order* changes.
+Does the model still land on the right answer?
+
+Fed all three conditions back and scored them.
+
+## What I found
+
+- Reversed: 57.3% accuracy
+- Shuffled: 66.3% accuracy
+- Partial: 73.0% accuracy (blended — more on this below)
+
+I expected reversed order to be the "gentlest" corruption — it's still a
+coherent, logical order, just backwards. I expected fully random shuffling to
+be the harshest. That's not what happened. Reversed hurt the model *more*
+than pure randomness did.
+
+Still figuring out exactly why, but my working guess is that a full reversal
+is close enough to a valid sequence that the model tries to follow it
+literally step by step, and that literal following is what causes it to
+compound errors. A fully random shuffle might be scrambled enough that the
+model falls back on just... reasoning from the problem itself, half-ignoring
+the broken step order it was handed. That's a hypothesis, not a conclusion —
+need to dig into individual failure cases before I'd stand behind it.
+
+## The part I almost missed
+
+The 73.0% "partial" number looked suspiciously good, so I split it apart —
+turns out 38 of those 89 problems had *no real middle to scramble* (3-4 step
+chains only have 0-1 middle steps), so I was accidentally measuring "barely
+touched the order at all" for nearly half the group. Once I separated that
+out: the untouched-order group scored 84.2%, not the ~100% I'd have expected
+if order really didn't matter at all.
+
+That gap — 84.2% instead of ~100% — told me something I hadn't accounted for:
+just *changing the prompt format* (from "generate your own reasoning" to
+"here are some steps, just give me the final answer") costs the model
+accuracy on its own, before I've scrambled anything. Which means my Reversed
+and Shuffled numbers above are currently tangled up with two effects at once
+— the real order effect, and this format-switch effect — and I can't fully
+tell them apart yet.
+
+So: building a control condition next (same prompt format, but the *original,
+correct* step order) to isolate that. Numbers above are real, but not final.
+
+## Honest state of things
+
+This is genuinely still in progress. The headline finding — reversed order
+hurting more than random shuffling — is real and reproducible, but I want the
+control run done before I'd post it as a clean causal claim rather than "here's
+what I'm seeing so far."
+
+
 ### [12-07-2026]
 
  Re-run stability check, due to a concern that temp=0.0 does not guarantee identical outputs across separate API calls — re-ran all 4 Stage 2 conditions once more (Trial 2) to check. Core finding held: Reversed < Shuffled < Partial in both trials. Per-problem flip rate (correct↔wrong between trials) scales with order disruption: Baseline-control 2.2%, Partial 5.6%, Shuffled 6.7%, Reversed 13.5% — disrupted order doesn't just lower accuracy, it lowers reproducibility. Reporting Reversed accuracy as a 2-trial average (58.4%), not a single-run point estimate, given its noise level.
 ---
+
+### [13-07-2026]
+
+#### What I did today
+ 
+Instead of taking that number at face value, I got suspicious and pushed for
+a second full trial before calling it — a large, clean-looking effect on a
+first run is exactly the kind of thing worth being paranoid about, not
+excited about.
+ 
+Good instinct. Tracing back through the parsing pipeline, I found a regex
+capture-group bug — `group(1)` instead of `group(2)` — that had been
+silently reducing most of the reasoning chains down to bare digits before
+they ever got scored. It affected somewhere between 63 and 100 of the 89
+eligible records. The step-order "effect" I was seeing wasn't the model
+struggling with broken reasoning order — it was partly just broken parsing.
+ 
+Fixed the regex, re-parsed Stage 1 (no new API calls needed, since that data
+was already there — just re-extracted correctly), regenerated every
+permutation from scratch, and re-ran all of Stage 2 fresh: 267 + 89 calls.
+ 
+## What I found (corrected)
+ 
+- Baseline-control: 95.51%
+- Reversed: 85.39%
+- Shuffled: 88.76%
+- Partial (non-degenerate, 5+ step only): 80.39%
+Every perturbed condition still scores below baseline — the direction of
+the original finding held. But the magnitude shrank a lot once the parser
+bug was gone.
+ 
+Ran McNemar's tests on the pairwise comparisons. Baseline-vs-Reversed
+(p=0.0352) and Baseline-vs-Partial (p=0.0391) look significant on their own,
+but neither survives Bonferroni correction across the 6 comparisons tested
+(corrected α≈0.0083). No comparison between the perturbation types
+themselves (Reversed vs Shuffled vs Partial) reached significance at any
+threshold.
+ 
+## Honest state of things
+ 
+This is a real, consistent directional trend — step-order disruption
+appears to lower CoT accuracy, and that direction replicated across two
+independent trials, even though the exact magnitude changed once I fixed
+the bug. But it is not statistically confirmed at this sample size (n=89,
+n=51 for Partial). H1's predicted ordering between perturbation types is
+neither confirmed nor cleanly refuted — the study is underpowered to
+distinguish between them right now.
+ 
+H2 (first-error-position analysis) is not implemented yet. It needs its own
+annotation or self-report methodology, and I'm not going to fake it with a
+shortcut — flagging it honestly as follow-up work instead.
+ 
+Catching this bug before publishing anything is arguably a better
+demonstration of actual research practice than the original dramatic number
+would have been.
+
+### [14-07-2026]
+
+#### What I built / learned
+Ran a second independent trial of the corrected (bug-fixed) Stage 2 pipeline
+at temperature=0.0, then updated `04_analysis.py` to run McNemar's exact test
+across both trials and compare per-problem flip rates between them.
+
+Trial 1 vs Trial 2 results:
+- Baseline-control: 85/89 (95.51%) both trials — 0% flip rate
+- Reversed: 76/89 (85.39%) both trials — 2.2% flip rate (1 flip each direction, net 0)
+- Shuffled: 79/89 (88.76%) both trials — 6.7% flip rate (3 each direction, net 0)
+- Partial (non-degenerate, n=51): 80.39% → 84.31% — 4.5% flip rate, net +2
+  (this is the only condition where the AGGREGATE number moved, not just
+  individual problems trading places)
+
+McNemar's exact test (Bonferroni-corrected for 6 comparisons, α=0.05/6≈0.0083):
+- Baseline vs. Reversed: p=0.0352 in both trials — raw-significant, not
+  Bonferroni-significant, but the most consistent result I have
+- Baseline vs. Partial (non-degenerate): raw-significant in trial 1
+  (p=0.0391), NOT significant in trial 2 (p=0.1250) — did not replicate
+- All other pairwise comparisons: not significant in either trial
+
+## Key insight
+Temperature=0.0 does not mean deterministic across separate API calls —
+already knew this in principle, but seeing it concretely (net-zero flip
+rates masking real underlying instability) made it click. More importantly:
+Partial permutation isn't just the worst-performing condition, it's also the
+LEAST stable one across repeated trials. That's a second, unplanned finding
+sitting next to my original research question — the model seems to be in a
+less confident/more variable regime specifically under partial reordering,
+possibly because it's the most structurally unusual condition (correct
+endpoints, scrambled middle) rather than a clean reversal or full shuffle.
+
+Overall honest status: every perturbed condition is directionally below
+baseline in both trials. Nothing survives multiple-comparison correction yet.
+This is a real, replicated, honestly-reported null-leaning result — not a
+failure, a legitimate pilot-study finding.
+
+### [14-07-2026]
+
+#### What I did today
+Designed and ran a follow-up self-report prompt (`05_h2_self_report.py`) to
+test H2: does the model's first reasoning error cluster at a specific step
+position when steps are reordered?
+
+Design choices:
+- Ground truth answer deliberately withheld from the follow-up prompt — if
+  shown the correct answer, the model could work backward and confabulate a
+  plausible-sounding step number rather than genuinely introspecting.
+- Model is shown its own prior response + the exact permuted step list it
+  saw the first time (numbered in the order it was given, not original
+  correct order), and asked to name a step number where it first went off
+  track, or "none."
+- Only run on records where `correct == False` (35 total: 13 reversed, 10
+  shuffled, 12 partial) — no divergence to find on records the model got
+  right.
+- Tracked divergence in BOTH permuted-position and original-position terms,
+  using the saved step-pairing from the Stage 2 permutation files, since
+  these are genuinely different questions and conflating them would be an
+  analysis error.
+
+Ran `analyze_h2_distribution.py` (read-only, no API calls) on the resulting
+`results/h2_self_report_trial1.jsonl` to get exact counts rather than
+eyeballing the terminal log.
+
+## Key insight
+**Permuted-position divergence distribution:**
+Step 1: 7, Step 2: 4, Step 3: 12, Step 4: 6, Step 6: 2, Step 7: 3,
+unparsed: 1 (problem 48, reversed)
+
+**Original-position divergence distribution (same 35 records, mapped back):**
+Step 1: 2, Step 2: 6, Step 3: 7, Step 4: 1, Step 5: 9, Step 6: 4, Step 7: 3,
+Step 9: 1, Step 12: 1
+
+Step 3 (in permuted order) is the clear mode — 34% of all self-reported
+divergences — holding up as the mode or tied-for-mode within each of the
+three conditions individually, not driven by one condition alone. My
+original H2 prediction (Step 2) was one of the smallest buckets (11%).
+
+The important confirmation is the CONTRAST between the two views: permuted-
+position clusters sharply, original-position is flat and spread out to
+position 12. That's evidence this is a real positional effect (something
+about being 3 steps into whatever sequence the model is handed, regardless
+of what content lives there) rather than certain reasoning content just
+being inherently fragile no matter where it sits. If it were a content
+effect, both distributions should cluster the same way — they don't.
+
+Revised, honest framing: H2 as originally stated (divergence clusters at
+Step 2) is not confirmed. A more specific, real finding replaces it:
+divergence clusters at Step 3 by sequence position, and the position-vs-
+content contrast supports this being genuine rather than coincidental.
+
+One unresolved item: problem 48 (reversed) produced an unparseable
+self-report — flagged for follow-up (parsing miss vs. genuine "can't
+identify a divergence" outcome, not yet determined).
+
+Built (not yet run): `06_manual_spotcheck.py` — blind manual annotation
+tool, stratified ~18-case sample across the three conditions, reveals the
+model's self-report only after my own judgment is locked in, to avoid
+anchoring. This is the step that actually determines whether the Step-3
+clustering finding can be trusted or whether it's confident pattern-matching
+from the model.
+
+### [15-07-2026]
+
+So for H2, I had the model self-report where its own reasoning first went off track. It clustered hard at "Step 3." Interesting pattern. But here's the catch I couldn't skip past: a model confidently explaining its own mistake isn't the same as the explanation being true. I already caught it citing a phrase as "the error" that was never actually used to compute anything.
+
+The only real check for that is manual annotation — done blind, no shortcuts:
+
+→ Strip the model's self-report and the ground-truth answer out entirely
+→ Read the problem, the steps exactly as the model saw them, and its wrong final answer
+→ Write down where I think it broke, before seeing what the model said
+→ Only then compare
+
+No LLM-assisted grading. No "let the model check itself" loop. Just sitting with each of the 35 cases and making a call.
+
+It's slow. It's the least glamorous part of this whole project. It's also the only way to know if "Step 3" is a real signal or a confident-sounding hallucination about its own thinking.
+
+Manual annotation isn't a chore standing between me and the results — for this question, it *is* the result.
+
+### [16-07-2026]
+
+#### What i built today
+The original hypothesis (H2) guessed that when the model's reasoning steps get shuffled,
+its answer breaks specifically at the 2nd step in the order it's shown. Checking that by
+hand across every wrong answer would mean reading dozens of full model responses myself.
+So I tried a shortcut first: asking the model to look back at its own wrong answer and
+self-report where its reasoning first went off track.
+
+## What I found
+
+Across 35 wrong answers, the self-reported failure point clustered hardest at the **3rd**
+step — not the 2nd, which is what I'd guessed going in. That's already a real, measurable
+pattern, and not the one I expected.
+
+## The part I'm not trusting yet
+
+A model confidently explaining its own mistake doesn't mean the explanation is true. I've
+already caught one case where the self-report cited something that sounded like a real
+reason but didn't actually match what the response had done. So before I write this up as
+a finding, I'm manually checking a sample myself — reading the actual response, deciding
+for myself where I think it broke, without looking at the model's own answer first, then
+comparing.
+
+
+## Honest state of things
+
+The Step-3 pattern is real in the self-report data. Whether it's real in *reality* is
+still open. Not writing that up as a conclusion until the check is finished — real numbers
+once it's done, not before.
+
 ### [17-07-2026]
 
 #### 1. Methodology change (record this explicitly in Methods)
@@ -981,25 +1249,8 @@ pending.
    discussion sections can now be drafted against final, confirmed numbers
 ---
 
-### What's next
-
-1. **Resolve the H2 integrity check above** (highest priority --
-   determines whether any already-reported H2 numbers need revision)
-2. If H2 needs revision: re-run the relevant portions of
-   `08_h2_careful_analysis.py` and the chi-square test with the corrected
-   pool size
-3. Once both H1 and H2 are confirmed final: update `readme.md`'s
-   paper-ready summary sentences (Section 8 of the 17-07-2026 entry) to
-   cite the corrected numbers, not the pre-fix ones
-4. Resume the Days 36-40 cross-model/cross-size thread status: Mistral
-   and Qwen 27B blocks are both closed (see their respective readme
-   entries); no further model attempts planned
-5. Begin paper draft assembly (originally scoped as Day 40) now that H1
-   is fully finalized and H2 is one integrity check away from the same
-
 ## Open items / deferred decisions
 
-- Exact answer-normalization edge cases (units, currency symbols) — deliberately minimal- done updated the normalize_answer
-  for now, will expand if a real mismatch is found
+- Answer-normalization edge cases (units, currency symbols) — RESOLVED 21-07-2026, normalize_answer fixed to handle multi-zero decimals (see entry above).
 - Rate-limit backoff strategy specifics — not yet needed, current sleep(2.5) sufficient
 ---
