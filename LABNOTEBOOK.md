@@ -1158,10 +1158,8 @@ and this item can be closed as a non-issue.
 **Status: H1 numbers are now final and corrected. H2 numbers are
 PROVISIONAL pending the integrity check above -- do not finalize the H2
 section of the paper until this is resolved.**
-
-### Parser fix applied in-place; H1 stats reconfirmed; H2 integrity check flagged
  
-**Covers work not logged on 20-07-2026** (the normalize_answer fix was
+**Work not logged on 20-07-2026** (the normalize_answer fix was
 identified and validated read-only on 20-07-2026 via
 17_rescore_with_fixed_normalizer.py; applying it in-place and
 re-running downstream analysis happened today).
