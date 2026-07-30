@@ -1,11 +1,10 @@
 """
-20_h3_local_feasibility.py — run ONE problem through a local model before
-committing to a full Stage 1 run. Matches your project's standing rule
-(every new model gets a single-problem check first).
+20_h3_local_feasibility.py — run a small batch (default 5) through a local
+model before committing to a full Stage 1 run.
 
-Usage (can be run from anywhere, paths are resolved relative to this file):
-    python 20_h3_local_feasibility.py phi3-mini
-    python 20_h3_local_feasibility.py qwen2.5-3b
+Usage:
+    python 20_h3_local_feasibility.py phi3-mini          # 5 problems
+    python 20_h3_local_feasibility.py qwen2.5-3b 10      # 10 problems
 """
 
 import sys
@@ -17,46 +16,75 @@ import utils_local_models as u
 ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = ROOT / "data" / "day27_gsm8k_subset.json"
 
+DEFAULT_N = 5
+MAX_N = 10
 
-def main(model_key: str):
+
+def main(model_key: str, n: int):
     with open(DATA_PATH) as f:
         subset = json.load(f)
 
-    problem = subset[0]
-    question = problem["question"]
-    ground_truth = problem["final_answer"]  # real key: "final_answer", not "answer"
+    # Spread picks evenly across the dataset for variety
+    indices = [int(i * len(subset) / n) for i in range(n)]
+    problems = [subset[i] for i in indices]
 
-    print(f"--- Feasibility test: {model_key} ---")
-    print(f"Problem id: {problem['id']}")
-    print(f"Ground truth: {ground_truth}\n")
+    print(f"--- Feasibility test: {model_key} | {n} problems ---\n")
 
-    raw = u.get_model_response(question, model_key=model_key)
-    print("=== RAW MODEL OUTPUT ===")
-    print(raw)
-    print("=== END RAW OUTPUT ===\n")
+    results = []
+    parse_fails = 0
 
-    steps, raw_answer = u.parse_response(raw)
-    norm_pred = u.normalize_answer(raw_answer)
-    norm_truth = u.normalize_answer(ground_truth)
-    correct = (norm_pred is not None) and (norm_pred == norm_truth)
+    for idx, problem in enumerate(problems, 1):
+        question = problem["question"]
+        ground_truth = problem["final_answer"]
+        pid = problem["id"]
 
-    print(f"Parsed step count: {len(steps)}")
-    print(f"Raw final answer: {raw_answer!r}")
-    print(f"Normalized: {norm_pred!r} vs ground truth {norm_truth!r}")
-    print(f"Correct: {correct}")
+        print(f"[{idx}/{n}] Problem id={pid}  (ground truth: {ground_truth})")
 
-    if raw_answer is None:
-        print("\n*** FEASIBILITY FAIL: no 'Final answer: <number>' line found. ***")
+        raw = u.get_model_response(question, model_key=model_key)
+
+        steps, raw_answer = u.parse_response(raw)
+        norm_pred = u.normalize_answer(raw_answer)
+        norm_truth = u.normalize_answer(ground_truth)
+        correct = (norm_pred is not None) and (norm_pred == norm_truth)
+
+        status = "✓" if correct else ("⚠ PARSE FAIL" if raw_answer is None else "✗")
+        print(f"       {status}  steps={len(steps)}  answer={norm_pred!r} vs {norm_truth!r}")
+
+        if raw_answer is None:
+            parse_fails += 1
+            print(f"       RAW OUTPUT (first 300 chars):\n       {raw[:300]}\n")
+
+        results.append({
+            "pid": pid, "correct": correct, "steps": len(steps),
+            "pred": norm_pred, "truth": norm_truth, "raw_answer": raw_answer,
+        })
+
+    # ── Summary ──
+    n_correct = sum(r["correct"] for r in results)
+    avg_steps = sum(r["steps"] for r in results) / len(results)
+
+    print(f"\n{'='*50}")
+    print(f"SUMMARY: {model_key}")
+    print(f"{'='*50}")
+    print(f"Accuracy:         {n_correct}/{n} ({n_correct/n:.0%})")
+    print(f"Avg parsed steps: {avg_steps:.1f}")
+    print(f"Parse failures:   {parse_fails}/{n}")
+
+    if parse_fails > 0:
+        print(f"\n*** {parse_fails} problem(s) had no parseable 'Final answer:' line. ***")
         print("Check the chat template / stop tokens before running a full batch.")
-        sys.exit(1)
-    if len(steps) < 2:
-        print("\n*** FEASIBILITY WARNING: fewer than 2 steps parsed on an easy problem. ***")
-
-    print("\nFeasibility check passed — safe to proceed to 21_h3_local_baseline.py.")
+    elif n_correct == 0:
+        print("\n*** Zero correct answers — model may not be suitable for this task. ***")
+    else:
+        print(f"\nFeasibility check passed — safe to proceed to 21_h3_local_baseline.py.")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2 or sys.argv[1] not in ("phi3-mini", "qwen2.5-3b"):
-        print("Usage: python 20_h3_local_feasibility.py [phi3-mini|qwen2.5-3b]")
+    if len(sys.argv) < 2 or sys.argv[1] not in ("phi3-mini", "qwen2.5-3b"):
+        print("Usage: python 20_h3_local_feasibility.py [phi3-mini|qwen2.5-3b] [n=5]")
         sys.exit(1)
-    main(sys.argv[1])
+
+    model = sys.argv[1]
+    n = int(sys.argv[2]) if len(sys.argv) > 2 else DEFAULT_N
+    n = max(1, min(n, MAX_N))
+    main(model, n)

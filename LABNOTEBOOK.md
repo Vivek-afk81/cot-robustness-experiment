@@ -34,8 +34,13 @@ We adopt Fragile Thoughts' robustness formula for comparability:
 
 ## Architecture note
 
-Local laptop (Windows), not Colab — every model call is an HTTP request to Groq's
-API, so no local GPU/compute is used and Colab offers no benefit here.
+Local laptop (Windows). H1/H2 and cross-family/cross-size experiments
+(Llama 3.1 8B, Mistral 8B, Qwen 27B) use HTTP requests to cloud APIs
+(Groq, Mistral AI) — no local GPU/compute needed for those.
+
+H3 sub-8B experiments (Phi-3 Mini, Qwen 2.5 3B) run locally on CPU via
+llama-cpp-python with quantized GGUF models. No GPU required — inference
+is CPU-only, slower but sufficient for the 100-problem subset.
 
 ---
 
@@ -1327,6 +1332,150 @@ remaining 49 Llama candidates.** This is a genuine addition to the
 paper's H2 section, not a replacement for existing SELF-BREAK numbers ---
 both are true simultaneously and describe different slices of the same
 underlying behavior (composition-of-failures vs.\ outcome-given-detection).
+
+
+### [30-07-2026] H3 implementation: Moving from API inference to local models
+
+#### Background
+
+The original plan for **H3 (cross-model robustness)** required evaluating a smaller open-weight model alongside Llama 3.1 8B.
+
+After exploring available inference providers, I found that **no free API or inference service reliably provided access to 2–3B instruction models** suitable for the experiment. Since this blocked H3 entirely, I decided to move from the API-based pipeline to **local GGUF inference using `llama-cpp-python`**.
+
+This changes only the inference backend. The experimental methodology, prompts, parsing pipeline, and evaluation remain unchanged.
+
+---
+
+### Installing local inference
+
+The existing project depended only on API inference and therefore did not include `llama-cpp-python`.
+
+Attempted installation:
+
+```bash
+pip install llama-cpp-python
+```
+
+This failed on Windows due to compiler/toolchain issues.
+
+Installation succeeded using the prebuilt CPU wheels:
+
+```bash
+pip install llama-cpp-python --prefer-binary --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+```
+
+After confirming the installation worked correctly, I updated the project's canonical dependency list:
+
+```bash
+pip freeze > requirements.txt
+```
+
+---
+
+### Repository maintenance
+
+GGUF model files are several gigabytes in size and should never be committed to version control.
+
+Added the following entry to `.gitignore`:
+
+```text
+*.gguf
+```
+
+---
+
+### Local models
+
+Planned models for H3:
+
+| Model | Status |
+|--------|--------|
+| Phi-3 Mini 4K Instruct (Q4_K_M GGUF) | ✅ Downloaded |
+| Qwen2.5-3B Instruct (Q4_K_M GGUF) | ⏳ Planned |
+
+At this stage only **Phi-3 Mini** has been downloaded.
+
+---
+
+### Verifying local inference
+
+Before running any experiments, I verified that the model loads successfully.
+
+Executed:
+
+```bash
+python local_model.py phi3-mini
+```
+
+The model loaded successfully and generated responses without errors.
+
+This confirmed that the local inference pipeline was functioning correctly before running the evaluation scripts.
+
+---
+
+### Feasibility test
+
+Before committing to a full 100-problem evaluation, I performed a small sanity check on five GSM8K problems.
+
+Command:
+
+```bash
+python 20_h3_local_feasibility.py phi3-mini
+```
+
+Results:
+
+| Metric | Value |
+|---------|------:|
+| Problems | 5 |
+| Correct | 4 |
+| Accuracy | 80% |
+| Average parsed steps | 7.2 |
+| Parse failures | 0 |
+
+The parser successfully extracted reasoning steps and final answers for every example, confirming compatibility with locally generated responses.
+
+---
+
+### Baseline evaluation (Phi-3 Mini)
+
+After the feasibility test succeeded, I launched the complete baseline evaluation.
+
+Command:
+
+```bash
+python 21_h3_local_baseline.py phi3-mini
+```
+
+The experiment evaluated **100 GSM8K problems** and incrementally wrote results to:
+
+```text
+results/h3_local_phi3-mini_stage1_baseline.jsonl
+```
+
+Final performance:
+
+| Metric | Value |
+|---------|------:|
+| Problems | 100 |
+| Correct | 72 |
+| Accuracy | **72.00%** |
+
+This establishes the clean baseline for Phi-3 Mini before applying any reasoning-order perturbations.
+
+---
+
+### Issue discovered: Output schema inconsistency
+
+1. id vs problem_id — Phi3 uses id (the raw key from day27_gsm8k_subset.json), but all other models use problem_id. This will break any downstream script that does r["problem_id"].
+
+2. n_parsed_steps — Phi3 has this extra field. Not harmful (extra fields are fine), but inconsistent.
+
+This is purely a structural change and does **not** affect any experimental results, and will update the script tomorrow
+
+---
+
+
 
 ### What's next
  
