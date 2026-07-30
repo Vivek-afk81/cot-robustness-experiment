@@ -39,7 +39,7 @@ API, so no local GPU/compute is used and Colab offers no benefit here.
 
 ---
 
-## Log
+## Logs
 
 ### [10-07-2026] — Dataset construction
 Pulled GSM8K test split (1,319 problems) from `github.com/openai/grade-school-math`.
@@ -1229,7 +1229,105 @@ invalid problem-5 entries) for full internal consistency.
 pending.
  
 ---
- 
+
+### [24-07-2026] — Recovery analysis filling the gap H2 left open: does the model self-correct?
+
+**Motivation:** H2's rule-based taxonomy (17-07-2026 entry) characterized
+only WRONG answers under perturbation, finding SELF-BREAK (model notices
+an inconsistency but continues reasoning anyway) as the dominant failure
+mode at 50%. This left an open, unasked question: among CORRECT answers
+under Reversed/Shuffled/Partial, does the model ever show the same kind
+of self-detected inconsistency and successfully recover from it? Without
+this half of the picture, "SELF-BREAK is 50% of failures" is
+uninterpretable in isolation --- it doesn't say whether noticing a
+disruption is usually fatal or usually survivable.
+
+**Method (19_recovery_analysis.py):** scanned every CORRECT response
+under a perturbed condition, across all models/trials, for keyword-level
+self-correction language ("wait," "actually," "ignore," "skip,"
+"correction," etc.) -- a crude, deliberately over-inclusive screen, same
+spirit as H2's automatic engagement scorer. Flagged candidates were then
+manually read and classified as genuine recovery or false positive
+(keyword present, no real detected error).
+
+**Keyword screen results:**
+
+| Model | Correct (perturbed) | Flagged | Flag rate |
+|---|---|---|---|
+| Llama-8B trial 1 | 234 | 62 | 26.5% |
+| Llama-8B trial 2 | 237 | 66 | 27.8% |
+| Ministral-8B | 89 | 0 | 0.0% |
+| Qwen-27B | 273 | 5 | 1.8% |
+
+**Cross-model pattern matches everything already established:** Mistral
+shows zero recovery-language candidates, consistent with its established
+full-bypass behavior (no engagement with step order at all, so nothing to
+recover from). Qwen shows a very low flag rate (1.8%), consistent with
+its silent-dependency-reconstruction mechanism (Section on Qwen 27B) ---
+it resequences reasoning internally without narrating the process, so it
+rarely produces explicit self-correction language even when genuinely
+engaging with content.
+
+**Manual classification (Llama):** 13/13 sampled flagged responses
+confirmed as genuine recovery (explicit "ignore this step," "skip it,"
+"come back later" language tied to an actual detected inconsistency, not
+incidental use of a trigger word). **Qwen: 2/5 genuine, 3/5 false
+positives** (model narrates its process but isn't actually flagging an
+error) -- confirming the keyword screen alone is not reliable without
+manual validation, consistent with every other automated-screen check in
+this project.
+
+**Conditional recovery rate (Llama, the key number):**
+
+$$\text{Recovery Rate} = \frac{62 \text{ recoveries}}{62 \text{ recoveries} + 15 \text{ SELF-BREAK failures}} \approx 80.5\%$$
+
+**IMPORTANT --- this substantially revises the H2 SELF-BREAK
+interpretation.** SELF-BREAK (detects inconsistency, fails anyway) is
+real but is the MINORITY outcome (~20%), not the dominant one, when
+viewed against the full population of detection events. The 50%
+SELF-BREAK figure from H2 describes the composition of *failures only*;
+it does not describe what happens, overall, when the model detects a
+step-order issue. Roughly 4 times out of 5, detection leads to successful
+recovery.
+
+**Two caveats, not yet resolved, before this number is final for the
+paper:**
+
+1. **The 62 figure is an extrapolation, not a full count.** Only 13 of
+   62 flagged Llama candidates were actually manually verified (13/13
+   genuine). Qwen's own flagged sample came back 2/5 genuine (60%, not
+   100%) --- proof the keyword screen does produce false positives in
+   general, even though none appeared in the Llama sample checked so
+   far. **Action item: validate the remaining 49 flagged Llama
+   candidates** (no API calls needed, pure manual reading of already-
+   collected text) before treating "62 recoveries" as a confirmed count
+   rather than a sample-based estimate in the paper.
+
+2. **The two counts in the ratio use asymmetric detection methods.**
+   The 15 SELF-BREAK failures came from a full manual read of all 30
+   classified wrong cases (nothing missed by design). The 62 recoveries
+   came from a keyword screen of the correct cases, which will miss
+   silent recoveries that don't use a listed trigger word. This means 62
+   likely UNDERcounts true recoveries --- so **80.5% should be reported
+   as a conservative lower-bound estimate of the true recovery rate, not
+   a precise figure.** State this direction explicitly if this goes in
+   the paper; do not present 80.5% as exact.
+
+**Updated cross-model strategy comparison (ready for paper, pending the
+validation above):**
+
+| Model | Strategy | Implication |
+|---|---|---|
+| Llama-8B | Explicit skip/ignore/reorder metacommentary | Engages with steps; succeeds via recovery ~80% of detection events, fails as SELF-BREAK ~20% |
+| Mistral-8B | Full bypass (re-derives from question/step content) | Never engages with step order at all; no recovery behavior because there is nothing to recover from |
+| Qwen-27B | Silent dependency reconstruction, minimal metacommentary | Near-perfect accuracy; processes content regardless of order, but rarely narrates the process |
+
+**Status: strong, novel finding, PROVISIONAL pending validation of the
+remaining 49 Llama candidates.** This is a genuine addition to the
+paper's H2 section, not a replacement for existing SELF-BREAK numbers ---
+both are true simultaneously and describe different slices of the same
+underlying behavior (composition-of-failures vs.\ outcome-given-detection).
+
 ### What's next
  
 1. **(Optional, low priority)** Recompute the Day-32 self-report-only
