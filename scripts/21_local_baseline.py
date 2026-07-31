@@ -1,5 +1,5 @@
 """
-21_h3_local_baseline.py — Stage 1 baseline for a local model, over the same
+21_local_baseline.py — Stage 1 baseline for a local model, over the same
 100-problem subset (data/day27_gsm8k_subset.json) used for Llama/Mistral/Qwen.
 
 Mirrors your 01_generate_baseline.py: incremental writes (one line per
@@ -8,11 +8,11 @@ resumable via append mode. No sleep needed for local inference, but a tiny
 pause is kept so a Ctrl-C lands cleanly.
 
 Usage (can be run from anywhere, paths are resolved relative to this file):
-    python 21_h3_local_baseline.py phi3-mini
-    python 21_h3_local_baseline.py qwen2.5-3b
+    python 21_local_baseline.py phi3-mini
+    python 21_local_baseline.py qwen2.5-3b
 
 Output:
-    data/h3_local_{model_key}_stage1_baseline.jsonl
+    data/local_{model_key}_stage1_baseline.jsonl
 """
 
 import sys
@@ -30,7 +30,7 @@ SLEEP_SECONDS = 0.1
 
 def main(model_key: str):
     DATA_DIR.mkdir(exist_ok=True)
-    output_path = DATA_DIR / f"h3_local_{model_key}_stage1_baseline.jsonl"
+    output_path = DATA_DIR / f"local_{model_key}_stage1_baseline.jsonl"
 
     with open(INPUT_PATH) as f:
         problems = json.load(f)
@@ -51,7 +51,7 @@ def main(model_key: str):
             except Exception as e:
                 print(f"ERROR: {e}")
                 error_record = {
-                    "id": problem["id"],
+                    "problem_id": problem["id"],
                     "bucket": problem.get("bucket"),
                     "question": question,
                     "ground_truth": ground_truth,
@@ -76,13 +76,12 @@ def main(model_key: str):
                 correct_count += 1
 
             record = {
-                "id": problem["id"],
+                "problem_id": problem["id"],
                 "bucket": problem.get("bucket"),
                 "question": question,
                 "ground_truth": ground_truth,
                 "raw_response": raw_response,
                 "parsed_steps": steps,
-                "n_parsed_steps": len(steps),
                 "parsed_answer": parsed_answer,
                 "correct": is_correct,
                 "error": None,
@@ -104,6 +103,6 @@ def main(model_key: str):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2 or sys.argv[1] not in ("phi3-mini", "qwen2.5-3b"):
-        print("Usage: python 21_h3_local_baseline.py [phi3-mini|qwen2.5-3b]")
+        print("Usage: python 21_local_baseline.py [phi3-mini|qwen2.5-3b]")
         sys.exit(1)
     main(sys.argv[1])

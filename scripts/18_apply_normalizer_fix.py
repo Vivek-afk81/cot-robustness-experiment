@@ -33,8 +33,8 @@ FILES_TO_FIX = [
     "results/stage2_baseline_control_v2_trial1.jsonl",
     "results/stage2_baseline_control_v2_trial2.jsonl",
     # Qwen files too, so any H3 analysis script also reflects the fix:
-    "results/h3_stage2_baseline_control.jsonl",
-    "results/h3_stage2_results.jsonl",
+    "results/qwen_stage2_baseline_control.jsonl",
+    "results/qwen_stage2_results.jsonl",
 ]
 
 

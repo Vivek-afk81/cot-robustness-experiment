@@ -19,7 +19,7 @@ INPUT_FILES = [
     ("Llama-8B trial 1",  "results/stage2_results_v2_trial1.jsonl"),
     ("Llama-8B trial 2",  "results/stage2_results_v2_trial2.jsonl"),
     ("Ministral-8B",      "results/stage2_results_mistral.jsonl"),
-    ("Qwen-27B",          "results/h3_stage2_results.jsonl"),
+    ("Qwen-27B",          "results/qwen_stage2_results.jsonl"),
 ]
 
 OUTPUT_PATH = "results/recovery_candidates_all.jsonl"

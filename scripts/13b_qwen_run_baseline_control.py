@@ -1,23 +1,23 @@
 """
-13b_h3_run_baseline_control.py
+13b_qwen_run_baseline_control.py
 
-H3 Stage 2 control: feeds each eligible problem's ORIGINAL (unpermuted)
+Qwen 27B Stage 2 control: feeds each eligible problem's ORIGINAL (unpermuted)
 Stage 1 steps through the Stage 2 prompt using qwen/qwen3.6-27b.
 Isolates the task-format-switch cost (Stage 1 free-generation → Stage 2
 scaffold) from any order-disruption effect.
 
 Mirrors 03b_run_baseline_control.py exactly — only imports and paths differ.
-Output: results/h3_stage2_baseline_control.jsonl
+Output: results/qwen_stage2_baseline_control.jsonl
 """
 
 import json
 import time
 
-from utils_h3 import get_model_response_stage2, parse_response, normalize_answer, MODEL_ID
+from utils_qwen import get_model_response_stage2, parse_response, normalize_answer, MODEL_ID
 
 
-INPUT_PATH  = "data/h3_stage1_baseline.jsonl"
-OUTPUT_PATH = "results/h3_stage2_baseline_control.jsonl"
+INPUT_PATH  = "data/qwen_stage1_baseline.jsonl"
+OUTPUT_PATH = "results/qwen_stage2_baseline_control.jsonl"
 MIN_STEPS   = 3
 SLEEP_SECONDS = 2.5
 

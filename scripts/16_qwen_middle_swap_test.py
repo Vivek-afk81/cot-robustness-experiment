@@ -1,5 +1,5 @@
 """
-16_h3_middle_swap_test.py
+16_qwen_middle_swap_test.py
 
 Targeted follow-up to the qwen/qwen3.6-27b cross-size finding. Isolates
 ONE specific confound from the Reversed-condition result: Reversed always
@@ -34,25 +34,25 @@ Why this isolates the confound cleanly:
 
 Sample size: deliberately small (15 problems) -- this is a targeted
 diagnostic, not a full condition needing 80+ statistical power. Reuses
-the eligible-problem pool from h3_stage1_baseline.jsonl (same filter as
+the eligible-problem pool from qwen_stage1_baseline.jsonl (same filter as
 02_permute_conditions.py-style scripts: correct AND >=3 steps... but here
 we also require >=5 steps, since a "middle" position isn't well-defined
 or meaningfully different from "near the end" for very short chains).
 
 --- ESTIMATED RUNTIME ---
 15 problems x ~1 call each x ~2.5s/call (same conservative Groq sleep as
-the rest of the H3 pipeline) = well under a minute of API time, plus
+the rest of the Qwen pipeline) = well under a minute of API time, plus
 generation latency. Expect 1-3 minutes total.
 """
 
 import json
 import time
 
-from utils_h3 import get_model_response_stage2, parse_response, normalize_answer, MODEL_ID
+from utils_qwen import get_model_response_stage2, parse_response, normalize_answer, MODEL_ID
 
 
-INPUT_PATH = "data/h3_stage1_baseline.jsonl"
-OUTPUT_PATH = "results/h3_middle_swap_test.jsonl"
+INPUT_PATH = "data/qwen_stage1_baseline.jsonl"
+OUTPUT_PATH = "results/qwen_middle_swap_test.jsonl"
 MIN_STEPS_FOR_MIDDLE = 5  # need a real "middle" distinct from first/last
 SAMPLE_SIZE = 15
 SLEEP_SECONDS = 2.5

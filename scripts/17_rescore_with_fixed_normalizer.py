@@ -42,9 +42,9 @@ FILES_TO_CHECK = [
     ("Mistral Stage 1 baseline",            "data/stage1_baseline_mistral.jsonl"),
     ("Mistral baseline-control",            "results/stage2_baseline_control_mistral.jsonl"),
     ("Mistral Stage 2 results (reversed)",  "results/stage2_results_mistral.jsonl"),
-    ("Qwen 27B Stage 1 baseline",           "data/h3_stage1_baseline.jsonl"),
-    ("Qwen 27B baseline-control",           "results/h3_stage2_baseline_control.jsonl"),
-    ("Qwen 27B Stage 2 results (all conditions)", "results/h3_stage2_results.jsonl"),
+    ("Qwen 27B Stage 1 baseline",           "data/qwen_stage1_baseline.jsonl"),
+    ("Qwen 27B baseline-control",           "results/qwen_stage2_baseline_control.jsonl"),
+    ("Qwen 27B Stage 2 results (all conditions)", "results/qwen_stage2_results.jsonl"),
 ]
 
 

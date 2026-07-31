@@ -1,10 +1,10 @@
 """
-20_h3_local_feasibility.py — run a small batch (default 5) through a local
+20_local_feasibility.py — run a small batch (default 5) through a local
 model before committing to a full Stage 1 run.
 
 Usage:
-    python 20_h3_local_feasibility.py phi3-mini          # 5 problems
-    python 20_h3_local_feasibility.py qwen2.5-3b 10      # 10 problems
+    python 20_local_feasibility.py phi3-mini          # 5 problems
+    python 20_local_feasibility.py qwen2.5-3b 10      # 10 problems
 """
 
 import sys
@@ -76,12 +76,12 @@ def main(model_key: str, n: int):
     elif n_correct == 0:
         print("\n*** Zero correct answers — model may not be suitable for this task. ***")
     else:
-        print(f"\nFeasibility check passed — safe to proceed to 21_h3_local_baseline.py.")
+        print(f"\nFeasibility check passed — safe to proceed to 21_local_baseline.py.")
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] not in ("phi3-mini", "qwen2.5-3b"):
-        print("Usage: python 20_h3_local_feasibility.py [phi3-mini|qwen2.5-3b] [n=5]")
+        print("Usage: python 20_local_feasibility.py [phi3-mini|qwen2.5-3b] [n=5]")
         sys.exit(1)
 
     model = sys.argv[1]

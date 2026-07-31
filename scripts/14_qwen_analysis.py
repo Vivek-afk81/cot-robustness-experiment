@@ -1,7 +1,7 @@
 """
-14_h3_analysis.py
+14_qwen_analysis.py
 
-H3 analysis: computes per-condition accuracy and Robustness_tau for
+Qwen 27B analysis: computes per-condition accuracy and Robustness_tau for
 qwen/qwen3.6-27b, then produces a direct comparison table against the
 Llama-3.1-8B-Instant (Trial 2 average) numbers from 04_analysis.py.
 
@@ -9,9 +9,9 @@ McNemar's exact test is NOT run across models (different problems-sets would
 apply if Stage 1 eligible sets differ); it is run for within-model condition
 comparisons (same logic as 04_analysis.py, Bonferroni n=6).
 
-Also notes the H3 interpretation clearly:
-  - 27B > 8B in parameter count, so a LOWER drop in tau is the H3-direction
-    result (larger model is MORE robust).
+Also notes the cross-size interpretation clearly:
+  - 27B > 8B in parameter count, so a LOWER drop in tau is the expected
+    direction result (larger model is MORE robust).
   - A *higher* drop would be surprising and worth reporting as an anomaly.
 """
 
@@ -23,9 +23,9 @@ from scipy.stats import binomtest
 # Paths
 # ---------------------------------------------------------------------------
 
-H3_STAGE1_PATH          = "data/h3_stage1_baseline.jsonl"
-H3_RESULTS_PATH         = "results/h3_stage2_results.jsonl"
-H3_BASELINE_CTRL_PATH   = "results/h3_stage2_baseline_control.jsonl"
+QWEN_STAGE1_PATH          = "data/qwen_stage1_baseline.jsonl"
+QWEN_RESULTS_PATH         = "results/qwen_stage2_results.jsonl"
+QWEN_BASELINE_CTRL_PATH   = "results/qwen_stage2_baseline_control.jsonl"
 
 # Llama reference numbers from 04_analysis.py (Trial 2 — use the averaged
 # tau from notebook.md: Reversed 58.4% reported as 2-trial average).
@@ -108,23 +108,23 @@ def mcnemar_exact(correct_a, correct_b, label_a, label_b, alpha=0.05, bonferroni
 # ---------------------------------------------------------------------------
 
 def run():
-    # ---- H3 model results ----
-    h3_results   = load_records(H3_RESULTS_PATH)
-    h3_baseline  = load_records(H3_BASELINE_CTRL_PATH)
+    # ---- Qwen 27B model results ----
+    qw_results   = load_records(QWEN_RESULTS_PATH)
+    qw_baseline  = load_records(QWEN_BASELINE_CTRL_PATH)
 
-    h3_bc   = load_correctness_by_id(h3_baseline)
-    h3_rev  = load_correctness_by_id(h3_results, "reversed")
-    h3_shuf = load_correctness_by_id(h3_results, "shuffled")
-    h3_part = load_correctness_by_id(h3_results, "partial")
-    h3_deg  = load_degenerate_flags(h3_results)
+    qw_bc   = load_correctness_by_id(qw_baseline)
+    qw_rev  = load_correctness_by_id(qw_results, "reversed")
+    qw_shuf = load_correctness_by_id(qw_results, "shuffled")
+    qw_part = load_correctness_by_id(qw_results, "partial")
+    qw_deg  = load_degenerate_flags(qw_results)
 
-    h3_part_nd = {pid: c for pid, c in h3_part.items() if not h3_deg.get(pid, True)}
+    qw_part_nd = {pid: c for pid, c in qw_part.items() if not qw_deg.get(pid, True)}
 
-    bc_acc,  bc_n,  bc_t   = acc(h3_bc)
-    rev_acc, rev_n, rev_t  = acc(h3_rev)
-    shuf_acc,shuf_n,shuf_t = acc(h3_shuf)
-    pa_acc,  pa_n,  pa_t   = acc(h3_part)
-    nd_acc,  nd_n,  nd_t   = acc(h3_part_nd)
+    bc_acc,  bc_n,  bc_t   = acc(qw_bc)
+    rev_acc, rev_n, rev_t  = acc(qw_rev)
+    shuf_acc,shuf_n,shuf_t = acc(qw_shuf)
+    pa_acc,  pa_n,  pa_t   = acc(qw_part)
+    nd_acc,  nd_n,  nd_t   = acc(qw_part_nd)
 
     tau_rev  = rev_acc  / bc_acc if bc_acc else float("nan")
     tau_shuf = shuf_acc / bc_acc if bc_acc else float("nan")
@@ -132,7 +132,7 @@ def run():
     tau_nd   = nd_acc   / bc_acc if bc_acc else float("nan")
 
     print("=" * 65)
-    print("H3 ANALYSIS — qwen/qwen3.6-27b")
+    print("QWEN 27B ANALYSIS — qwen/qwen3.6-27b")
     print("=" * 65)
     print(f"\n{'Condition':<28}{'Accuracy':<20}{'Robustness_tau'}")
     print(f"{'Baseline-control':<28}{f'{bc_n}/{bc_t} ({bc_acc:.2%})':<20}{'1.000 (ref)'}")
@@ -143,12 +143,12 @@ def run():
 
     print(f"\n  Within-model significance tests (McNemar, Bonferroni n=6):")
     N = 6
-    mcnemar_exact(h3_bc, h3_rev,  "Baseline-control", "Reversed", bonferroni_n=N)
-    mcnemar_exact(h3_bc, h3_shuf, "Baseline-control", "Shuffled", bonferroni_n=N)
-    mcnemar_exact(h3_bc, h3_part_nd, "Baseline-control", "Partial (non-deg)", bonferroni_n=N)
-    mcnemar_exact(h3_rev,  h3_shuf,    "Reversed", "Shuffled", bonferroni_n=N)
-    mcnemar_exact(h3_rev,  h3_part_nd, "Reversed", "Partial (non-deg)", bonferroni_n=N)
-    mcnemar_exact(h3_shuf, h3_part_nd, "Shuffled", "Partial (non-deg)", bonferroni_n=N)
+    mcnemar_exact(qw_bc, qw_rev,  "Baseline-control", "Reversed", bonferroni_n=N)
+    mcnemar_exact(qw_bc, qw_shuf, "Baseline-control", "Shuffled", bonferroni_n=N)
+    mcnemar_exact(qw_bc, qw_part_nd, "Baseline-control", "Partial (non-deg)", bonferroni_n=N)
+    mcnemar_exact(qw_rev,  qw_shuf,    "Reversed", "Shuffled", bonferroni_n=N)
+    mcnemar_exact(qw_rev,  qw_part_nd, "Reversed", "Partial (non-deg)", bonferroni_n=N)
+    mcnemar_exact(qw_shuf, qw_part_nd, "Shuffled", "Partial (non-deg)", bonferroni_n=N)
 
     # ---- Cross-model comparison table ----
     try:
@@ -172,17 +172,17 @@ def run():
         ltau_nd   = lnd_a   / lbc_a if lbc_a else float("nan")
 
         print("\n\n" + "=" * 65)
-        print("CROSS-MODEL COMPARISON (H3 direction check)")
+        print("CROSS-MODEL COMPARISON (cross-size direction check)")
         print("=" * 65)
-        print("H3 prediction: 27B model should be MORE robust (higher tau)\n")
+        print("Prediction: 27B model should be MORE robust (higher tau)\n")
         print(f"{'Condition':<28}{'Llama-3.1-8B tau':<20}{'Qwen-27B tau':<20}{'Direction'}")
         print("-" * 65)
 
-        def direction(llama_tau, h3_tau):
-            if abs(llama_tau - h3_tau) < 0.01:
+        def direction(llama_tau, qw_tau):
+            if abs(llama_tau - qw_tau) < 0.01:
                 return "≈ same"
-            if h3_tau > llama_tau:
-                return "✓ H3 direction (27B more robust)"
+            if qw_tau > llama_tau:
+                return "✓ expected direction (27B more robust)"
             return "✗ opposite (27B less robust)"
 
         print(f"{'Reversed':<28}{ltau_rev:<20.3f}{tau_rev:<20.3f}{direction(ltau_rev, tau_rev)}")
@@ -190,8 +190,7 @@ def run():
         print(f"{'Partial (non-deg)':<28}{ltau_nd:<20.3f}{tau_nd:<20.3f}{direction(ltau_nd, tau_nd)}")
 
         print("\nNote: this is a cross-model size comparison (27B vs 8B), not a formal")
-        print("H3 test (H3 called for smaller, not larger, model vs 8B baseline).")
-        print("A consistent direction across conditions is suggestive but descriptive.")
+        print("test. A consistent direction across conditions is suggestive but descriptive.")
 
     except FileNotFoundError as e:
         print(f"\n[Llama reference files not found — skipping cross-model table: {e}]")

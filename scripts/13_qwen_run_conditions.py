@@ -1,25 +1,25 @@
 """
-13_h3_run_conditions.py
+13_qwen_run_conditions.py
 
-H3 Stage 2, part 2: runs the three permuted-condition files through
+Qwen 27B Stage 2, part 2: runs the three permuted-condition files through
 qwen/qwen3.6-27b and scores against ground truth.
 
 Mirrors 03_run_conditions.py exactly — only imports and file paths differ.
-Output: results/h3_stage2_results.jsonl
+Output: results/qwen_stage2_results.jsonl
 """
 
 import json
 import time
 
-from utils_h3 import get_model_response_stage2, parse_response, normalize_answer, MODEL_ID
+from utils_qwen import get_model_response_stage2, parse_response, normalize_answer, MODEL_ID
 
 
 CONDITION_FILES = {
-    "reversed": "data/h3_stage2_reversed.jsonl",
-    "shuffled": "data/h3_stage2_shuffled.jsonl",
-    "partial":  "data/h3_stage2_partial.jsonl",
+    "reversed": "data/qwen_stage2_reversed.jsonl",
+    "shuffled": "data/qwen_stage2_shuffled.jsonl",
+    "partial":  "data/qwen_stage2_partial.jsonl",
 }
-OUTPUT_PATH = "results/h3_stage2_results.jsonl"
+OUTPUT_PATH = "results/qwen_stage2_results.jsonl"
 SLEEP_SECONDS = 2.5
 
 

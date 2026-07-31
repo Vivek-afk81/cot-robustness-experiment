@@ -1,7 +1,7 @@
 """
 15_spotcheck_qwen_bypass.py
 
-Validation check for the qwen/qwen3.6-27b H3 run's clean baseline-control
+Validation check for the qwen/qwen3.6-27b cross-size run's clean baseline-control
 vs. Reversed result (97.8% both conditions, per the run summary).
 
 Same rationale as 09_spotcheck_mistral_bypass.py: a perfect or
@@ -13,7 +13,7 @@ baseline-control and Reversed). An aggregate accuracy number cannot tell
 these two explanations apart; only reading the actual response text can.
 
 This script pulls every problem_id present in BOTH
-results/h3_stage2_baseline_control.jsonl and results/h3_stage2_results.jsonl
+results/qwen_stage2_baseline_control.jsonl and results/qwen_stage2_results.jsonl
 (condition == "reversed"), reports a full character-similarity pass across
 ALL matched cases (not just a small sample -- cheap to do exhaustively
 since it's just text comparison, no API calls), and prints a random sample
@@ -34,9 +34,9 @@ import json
 from difflib import SequenceMatcher
 import random
 
-BASELINE_PATH = "results/h3_stage2_baseline_control.jsonl"
-RESULTS_PATH = "results/h3_stage2_results.jsonl"
-REVERSED_INPUT_PATH = "data/h3_stage2_reversed.jsonl"  # for question/original_steps/permuted_steps context
+BASELINE_PATH = "results/qwen_stage2_baseline_control.jsonl"
+RESULTS_PATH = "results/qwen_stage2_results.jsonl"
+REVERSED_INPUT_PATH = "data/qwen_stage2_reversed.jsonl"  # for question/original_steps/permuted_steps context
 
 SAMPLE_SIZE = 8  # how many full response pairs to print for manual reading
 RANDOM_SEED = 13

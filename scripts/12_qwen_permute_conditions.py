@@ -1,8 +1,8 @@
 """
-12_h3_permute_conditions.py
+12_qwen_permute_conditions.py
 
-H3 Stage 2, part 1: generate the three permuted-step conditions for the Qwen
-27B run.  Reads data/h3_stage1_baseline.jsonl, applies the same eligibility
+Qwen 27B Stage 2, part 1: generate the three permuted-step conditions.
+Reads data/qwen_stage1_baseline.jsonl, applies the same eligibility
 filter (correct AND >=3 parsed steps), and writes reversed / shuffled / partial
 condition files to data/.
 
@@ -11,16 +11,16 @@ Identical logic to 02_permute_conditions.py — only file paths change.
 
 import json
 
-from utils_h3 import get_reversed, get_shuffled, get_partial
+from utils_qwen import get_reversed, get_shuffled, get_partial
 
 
-INPUT_PATH = "data/h3_stage1_baseline.jsonl"
+INPUT_PATH = "data/qwen_stage1_baseline.jsonl"
 MIN_STEPS = 3
 
 OUTPUT_PATHS = {
-    "reversed": "data/h3_stage2_reversed.jsonl",
-    "shuffled": "data/h3_stage2_shuffled.jsonl",
-    "partial":  "data/h3_stage2_partial.jsonl",
+    "reversed": "data/qwen_stage2_reversed.jsonl",
+    "shuffled": "data/qwen_stage2_shuffled.jsonl",
+    "partial":  "data/qwen_stage2_partial.jsonl",
 }
 
 

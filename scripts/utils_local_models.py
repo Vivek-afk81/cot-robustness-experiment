@@ -32,7 +32,7 @@ def get_model_response(question, model_key=None):
     """Send one GSM8K question to the local model and return the raw response text."""
     key = model_key or MODEL_KEY
     if key is None:
-        raise ValueError("model_key must be set (pass it in or set utils_h3_local.MODEL_KEY)")
+        raise ValueError("model_key must be set (pass it in or set utils_local_models.MODEL_KEY)")
 
     prompt = f"""Solve this problem step by step. Number each step (1., 2., 3., ...).
 End your response with exactly: "Final answer: <number>"
@@ -171,7 +171,7 @@ Steps:
 def get_model_response_stage2(question, steps, model_key=None):
     key = model_key or MODEL_KEY
     if key is None:
-        raise ValueError("model_key must be set (pass it in or set utils_h3_local.MODEL_KEY)")
+        raise ValueError("model_key must be set (pass it in or set utils_local_models.MODEL_KEY)")
 
     prompt = build_stage2_prompt(question, steps)
     return call_model(key, prompt, max_tokens=600, temperature=0.0)

@@ -1,21 +1,21 @@
 """
-11_h3_generate_baseline.py
+11_qwen_generate_baseline.py
 
-H3 Stage 1: free-generation baseline using qwen/qwen3.6-27b via Groq.
+Qwen 27B Stage 1: free-generation baseline using qwen/qwen3.6-27b via Groq.
 Identical task design to 01_generate_baseline.py — same 100-problem subset,
 same prompt, same parser, same scorer.  Only the model changes.
 
-Output: data/h3_stage1_baseline.jsonl
+Output: data/qwen_stage1_baseline.jsonl
 """
 
 import json
 import time
 
-from utils_h3 import get_model_response, parse_response, normalize_answer, MODEL_ID
+from utils_qwen import get_model_response, parse_response, normalize_answer, MODEL_ID
 
 
 INPUT_PATH = "data/day27_gsm8k_subset.json"
-OUTPUT_PATH = "data/h3_stage1_baseline.jsonl"
+OUTPUT_PATH = "data/qwen_stage1_baseline.jsonl"
 SLEEP_SECONDS = 2.5   # conservative — Groq free tier, preview model
 
 
