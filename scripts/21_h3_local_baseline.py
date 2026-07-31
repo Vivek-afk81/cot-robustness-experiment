@@ -7,6 +7,12 @@ problem, flushed immediately), API-error records kept rather than dropped,
 resumable via append mode. No sleep needed for local inference, but a tiny
 pause is kept so a Ctrl-C lands cleanly.
 
+Schema note: "problem_id" here IS the real GSM8K subset id (problem["id"]),
+not a row-enumeration. This differs from your existing Llama/Mistral/Qwen
+files, where "problem_id" is actually just row position 1-100 due to a
+pre-existing bug (problem.get("problem_id", i) always misses and falls back
+to i). Deliberately not replicating that bug here.
+
 Usage (can be run from anywhere, paths are resolved relative to this file):
     python 21_local_baseline.py phi3-mini
     python 21_local_baseline.py qwen2.5-3b
@@ -30,7 +36,7 @@ SLEEP_SECONDS = 0.1
 
 def main(model_key: str):
     DATA_DIR.mkdir(exist_ok=True)
-    output_path = DATA_DIR / f"local_{model_key}_stage1_baseline.jsonl"
+    output_path = DATA_DIR / f"h3_local_{model_key}_stage1_baseline.jsonl"
 
     with open(INPUT_PATH) as f:
         problems = json.load(f)
@@ -76,7 +82,8 @@ def main(model_key: str):
                 correct_count += 1
 
             record = {
-                "problem_id": problem["id"],
+                # "problem_id": problem["id"],
+                "problem_id": problem.get("problem_id", i),
                 "bucket": problem.get("bucket"),
                 "question": question,
                 "ground_truth": ground_truth,

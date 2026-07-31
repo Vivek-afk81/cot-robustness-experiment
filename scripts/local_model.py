@@ -84,6 +84,12 @@ def get_model(model_key: str, n_threads: int | None = None) -> Llama:
 
     return llm
 
+def load_model(model_key: str, n_threads: int | None = 12):
+    """
+    Preload a model into memory.
+    Safe to call multiple times because models are cached.
+    """
+    return get_model(model_key, n_threads=n_threads)
 
 def call_model(
     model_key: str,
