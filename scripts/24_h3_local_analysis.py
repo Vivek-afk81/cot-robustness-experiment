@@ -9,6 +9,17 @@ by the `degenerate` flag (from get_partial), not blended — matching the
 optional; every prior cross-model block in this project needed one before
 its accuracy numbers meant anything.
 
+UPDATED: bypass_spotcheck now also breaks Partial down by exact step count
+(3-step / 4-step / 5+-step), not just the True/False degenerate flag — a
+3-step chain is degenerate because it's IDENTICAL to baseline by
+construction (get_partial returns it completely unchanged), while a 4-step
+chain is degenerate because its only non-identity middle permutation is a
+reversal (real, if limited, disruption). Blending those two together under
+one "degenerate=True" bucket inflates the apparent identical-response rate
+with cases that were never going to differ in the first place. Also prints
+the problem_id of every identical/near-identical case per condition so you
+can go read the actual raw_response pairs by hand.
+
 Usage (can be run from anywhere, paths are resolved relative to this file):
     python 24_h3_local_analysis.py phi3-mini
 """
@@ -116,38 +127,101 @@ def mcnemar_pairwise(records, cond_a, cond_b):
     return result.pvalue
 
 
-def bypass_spotcheck(records, similarity_threshold=0.90):
-    by_pid = defaultdict(dict)
+def _step_count_bucket(n_steps):
+    if n_steps == 3:
+        return "3-step"
+    if n_steps == 4:
+        return "4-step"
+    return "5+-step"
+
+
+def bypass_spotcheck(records, similarity_threshold=0.90, max_ids_printed=20):
+    by_pid_response = defaultdict(dict)   # pid -> {condition: raw_response}
+    n_steps_by_pid = {}                   # pid -> len(original_steps), from whichever record has it
+
     for r in records:
-        by_pid[r["problem_id"]][r["condition"]] = r["raw_response"]
+        pid = r["problem_id"]
+        by_pid_response[pid][r["condition"]] = r["raw_response"]
+        if pid not in n_steps_by_pid:
+            n_steps_by_pid[pid] = len(r.get("original_steps") or [])
 
     print("\n=== Bypass spotcheck (character similarity vs baseline_control) ===")
     for cond in ("reversed", "shuffled", "partial"):
-        identical = near_identical = different = 0
-        n = 0
-        for pid, resp in by_pid.items():
+        identical_pids, near_identical_pids, different_pids = [], [], []
+
+        for pid, resp in by_pid_response.items():
             base = resp.get("baseline_control")
             other = resp.get(cond)
             if base is None or other is None:
                 continue
-            n += 1
             ratio = difflib.SequenceMatcher(None, base, other).ratio()
             if base == other:
-                identical += 1
+                identical_pids.append(pid)
             elif ratio >= similarity_threshold:
-                near_identical += 1
+                near_identical_pids.append(pid)
             else:
-                different += 1
+                different_pids.append(pid)
+
+        n = len(identical_pids) + len(near_identical_pids) + len(different_pids)
         if n == 0:
             continue
-        print(f"  {cond:10s}: identical={identical} ({100*identical/n:.1f}%), "
-              f"near-identical={near_identical} ({100*near_identical/n:.1f}%), "
-              f"different={different} ({100*different/n:.1f}%)  [n={n}]")
+
+        print(f"  {cond:10s}: identical={len(identical_pids)} ({100*len(identical_pids)/n:.1f}%), "
+              f"near-identical={len(near_identical_pids)} ({100*len(near_identical_pids)/n:.1f}%), "
+              f"different={len(different_pids)} ({100*len(different_pids)/n:.1f}%)  [n={n}]")
+
+        flagged = identical_pids + near_identical_pids
+        if flagged:
+            shown = sorted(flagged)[:max_ids_printed]
+            more = f" (+{len(flagged) - len(shown)} more)" if len(flagged) > len(shown) else ""
+            print(f"    identical/near-identical problem_ids: {shown}{more}")
+
+        # Partial-specific: break the identical/near-identical set down by
+        # actual step count, since 3-step chains are identical to baseline
+        # BY CONSTRUCTION (get_partial can't touch a 0-element middle) and
+        # tell you nothing about model behavior, while 4-step and 5+-step
+        # identical cases are genuinely informative — the prompt WAS
+        # different and the model still produced the same output.
+        if cond == "partial":
+            bucket_counts = defaultdict(lambda: {"identical": 0, "near_identical": 0, "different": 0, "total": 0})
+            for pid in identical_pids:
+                b = _step_count_bucket(n_steps_by_pid.get(pid, 0))
+                bucket_counts[b]["identical"] += 1
+                bucket_counts[b]["total"] += 1
+            for pid in near_identical_pids:
+                b = _step_count_bucket(n_steps_by_pid.get(pid, 0))
+                bucket_counts[b]["near_identical"] += 1
+                bucket_counts[b]["total"] += 1
+            for pid in different_pids:
+                b = _step_count_bucket(n_steps_by_pid.get(pid, 0))
+                bucket_counts[b]["different"] += 1
+                bucket_counts[b]["total"] += 1
+
+            print("    partial, broken down by actual step count:")
+            for bucket_label in ("3-step", "4-step", "5+-step"):
+                c = bucket_counts.get(bucket_label)
+                if not c or c["total"] == 0:
+                    continue
+                note = "  <- identical here is GUARANTEED by construction, not model behavior" \
+                    if bucket_label == "3-step" else ""
+                print(f"      {bucket_label:8s}: identical={c['identical']}, "
+                      f"near-identical={c['near_identical']}, different={c['different']}, "
+                      f"total={c['total']}{note}")
+
+                if bucket_label != "3-step" and (c["identical"] or c["near_identical"]):
+                    bucket_flagged = sorted(
+                        [pid for pid in identical_pids + near_identical_pids
+                         if _step_count_bucket(n_steps_by_pid.get(pid, 0)) == bucket_label]
+                    )[:max_ids_printed]
+                    print(f"        problem_ids to read by hand: {bucket_flagged}")
 
     print("\n  If identical+near-identical is high (>~50%) for a condition, "
           "manually read a sample of that condition's raw_response before "
           "trusting its accuracy number — see the Mistral bypass "
-          "investigation for what to look for.")
+          "investigation for what to look for. For 'partial', ignore the "
+          "3-step bucket when judging bypass risk — it can't be anything "
+          "but identical by construction. The 4-step and 5+-step buckets "
+          "are the ones that actually tell you something.")
 
 
 def main(model_key: str):

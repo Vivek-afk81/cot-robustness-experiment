@@ -35,7 +35,7 @@ MODEL_CONFIGS = {
         "n_ctx": 4096,
     },
     "qwen2.5-3b": {
-        "path": ROOT / "models" / "qwen2.5-3b-instruct-q4_k_m.gguf",
+        "path": ROOT / "models" / "Qwen2.5-3B-Instruct-Q4_K_M.gguf",
         "chat_format": "chatml",
         "n_ctx": 4096,
     },
