@@ -105,10 +105,6 @@ def main(model_key: str):
         pct = (100 * correct / total) if total else float("nan")
         print(f"  {cond:16s}: {correct}/{total} ({pct:.1f}%)")
 
-    print("\nNEXT STEP — run 24_local_analysis.py, which includes a "
-          "bypass spotcheck. Do not report Robustness_tau from the numbers "
-          "above until that check has been read, per project standing rule.")
-
 
 if __name__ == "__main__":
     if len(sys.argv) != 2 or sys.argv[1] not in ("phi3-mini", "qwen2.5-3b"):
