@@ -174,7 +174,7 @@ def run():
     print("\n--- DONE ---")
     print(f"Output: {OUTPUT_PATH}")
     print("Next: run the manual spot-check annotation script on a 15-20 case")
-    print("sample before trusting this self-report data's agreement rate.")
+
 
 
 if __name__ == "__main__":

@@ -150,10 +150,7 @@ def run():
             print(">>> content/order, or is it a fresh solve (or a transcription/selection")
             print(">>> artifact, per the Mistral stepwise-prompt finding)?")
 
-    print("\n" + "=" * 70)
-    print("Form a judgment from the sample above before updating the readme/paper.")
-    print("Do not report tau=1.000-style results as 'robust' without this check --")
-    print("that mistake is exactly what the Mistral investigation exists to prevent.")
+
 
 
 if __name__ == "__main__":

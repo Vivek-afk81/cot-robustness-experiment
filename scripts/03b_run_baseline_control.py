@@ -134,8 +134,8 @@ def run():
     print(f"  Stage 1 (free generation): {stage1_correct}/{stage1_total} ({stage1_accuracy:.2%})")
     print("\nUse the baseline-control number above (not Stage 1's), as the denominator")
     print("for Robustness_tau when evaluating Reversed / Shuffled / Partial(non-degenerate).")
-    print("(Partial degenerate/non-degenerate split is NOT computed here — run that")
-    print("check separately against results/stage2_results_v2_trial1.jsonl.)")
+    print("(Partial degenerate/non-degenerate split is NOT computed here")
+
  
  
 if __name__ == "__main__":

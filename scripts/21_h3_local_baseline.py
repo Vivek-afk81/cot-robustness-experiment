@@ -82,7 +82,6 @@ def main(model_key: str):
                 correct_count += 1
 
             record = {
-                # "problem_id": problem["id"],
                 "problem_id": problem.get("problem_id", i),
                 "bucket": problem.get("bucket"),
                 "question": question,

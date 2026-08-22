@@ -3,8 +3,7 @@
 
 Day 37 — Stage 2, Reversed condition only, for the cross-model block
 (ministral-8b-2512). Per Day 37's scope, only Reversed is run this stage
-(strongest raw signal from the Llama run) -- Shuffled and Partial are
-deferred to Day 39, pending Day 38's decision.
+(strongest raw signal from the Llama run) 
 
 Reads the Reversed permutation file built by 02b_permute_conditions_mistral.py,
 feeds each problem's reversed steps to the model via the same Stage 2
@@ -17,11 +16,6 @@ Same formula and reasoning as 03b_run_baseline_control_mistral.py:
 If eligible_count is similar to Llama's 89: ~89 * 2s =~ 3 minutes.
 Run 02b_permute_conditions_mistral.py first to see the ACTUAL eligible
 count for this model before estimating your own runtime.
-
-Total Day 37 API-calling time (baseline-control + reversed combined):
-roughly DOUBLE the single-script estimate above, since both scripts iterate
-over the same eligible set once each -- so budget ~6 minutes total if the
-eligible count is Llama-comparable (~89), not ~3 minutes for both together.
 
 Input:  data/stage2_reversed_mistral.jsonl
 Output: results/stage2_results_mistral.jsonl

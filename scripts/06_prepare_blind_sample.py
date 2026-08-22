@@ -203,10 +203,4 @@ if __name__ == "__main__":
     sample = build_sample(sample_n=args.sample)
     write_outputs(sample)
 
-    print("\n--- NEXT STEP ---")
-    print(f"Open {SHEET_PATH} in a text editor (or write a tiny script to loop")
-    print("through it). For each record, read the question + steps-as-shown +")
-    print("model's final response, and fill in YOUR_first_divergence_step_guess")
-    print("(an integer 1..n_steps, or 'none' if you don't think there's a clear")
-    print("single divergence point). Save your edits, THEN run")
-    print("07_compare_annotations.py to see how you compare to the model.")
+    print("")

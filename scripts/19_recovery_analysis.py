@@ -133,11 +133,6 @@ def run():
     for m, n in models.items():
         print(f"  {m}: {n}")
 
-    print("\n--- NEXT STEP ---")
-    print("Open the output file, read each raw_response, and fill in")
-    print("MANUAL_is_genuine_recovery (true / false / unclear).")
-    print("Then compute conditional recovery rate per model:")
-    print("  recoveries / (recoveries + SELF-BREAK failures)")
 
 
 if __name__ == "__main__":

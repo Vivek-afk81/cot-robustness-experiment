@@ -1,9 +1,6 @@
 """
 02b_permute_conditions_mistral.py
 
-Day 37 — eligibility filtering + Reversed-only permutation for the
-cross-model block (ministral-8b-2512).
-
 Deliberately generates ONLY the Reversed condition, per the roadmap's Day
 37 scope ("Run Stage 2 for Baseline-control vs. Reversed only -- your
 strongest raw signal from the Llama run -- deliberately not the full
